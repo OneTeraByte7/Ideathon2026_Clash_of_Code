@@ -7,11 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from config import get_settings
-from db.database import engine
-from db.init_db import init_db
-
-# Import models to register with SQLAlchemy
-from models import patient, vital, alert, protocol  # noqa: F401
+from db.mongo_database import init_db, close_db
 
 # Routers
 from api.patients import router as patients_router
@@ -26,16 +22,16 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables
+    # Startup: connect to MongoDB
     await init_db()
     yield
-    # Shutdown: close engine
-    await engine.dispose()
+    # Shutdown: close MongoDB connection
+    await close_db()
 
 
 app = FastAPI(
     title="Asclepius AI",
-    description="ICU Sepsis Early Warning System — Multi-Agent AI with Gemini RAG",
+    description="ICU Sepsis Early Warning System — Multi-Agent AI with Gemini RAG + MongoDB Atlas",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -62,10 +58,11 @@ async def root():
         "system": "Asclepius AI",
         "status": "online",
         "version": "1.0.0",
+        "database": "MongoDB Atlas",
         "docs": "/docs",
     }
 
 
 @app.get("/health", tags=["Health"])
 async def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "database": "MongoDB Atlas"}

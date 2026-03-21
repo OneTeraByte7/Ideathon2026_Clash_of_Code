@@ -1,16 +1,12 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-import os
-from pathlib import Path
-
-# Get the backend directory (where this file is located)
-BACKEND_DIR = Path(__file__).parent
 
 
 class Settings(BaseSettings):
     app_name: str = "Asclepius AI"
     debug: bool = True
-    database_url: str = f"sqlite+aiosqlite:///{BACKEND_DIR}/asclepius.db"
+    mongodb_url: str = ""
+    database_name: str = "Asclepius"
     gemini_api_key: str = ""
 
     nurse_webhook_url: str = ""
@@ -22,6 +18,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 @lru_cache

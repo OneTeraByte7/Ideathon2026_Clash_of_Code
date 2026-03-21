@@ -1,0 +1,16 @@
+{
+  "description": "CSV schema for seeding ICU vitals into Asclepius AI",
+  "columns": {
+    "heart_rate": { "type": "float", "unit": "bpm", "normal_range": [60, 90] },
+    "systolic_bp": { "type": "float", "unit": "mmHg", "normal_range": [100, 140] },
+    "respiratory_rate": { "type": "float", "unit": "breaths/min", "normal_range": [12, 20] },
+    "temperature": { "type": "float", "unit": "Celsius", "normal_range": [36.0, 38.0] },
+    "spo2": { "type": "float", "unit": "%", "normal_range": [95, 100] },
+    "lactate": { "type": "float", "unit": "mmol/L", "normal_range": [0.5, 2.0] }
+  },
+  "notes": [
+    "Each row maps to one patient (cycled if fewer rows than patients)",
+    "Upload via POST /seed/normal, /seed/warning, or /seed/critical",
+    "All 6 columns are required"
+  ]
+}

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import React from "react";
 
 const METRICS = {
   heart_rate:       { label: "Heart Rate",   unit: "bpm",       normal: [60, 90],   icon: "♥" },
@@ -47,6 +48,18 @@ const STATUS_STYLES = {
 };
 
 export default function VitalTile({ metricKey, value, index = 0 }) {
+  const [isDark, setIsDark] = React.useState(true);
+  
+  React.useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.body.classList.contains('light') === false);
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const meta = METRICS[metricKey];
   if (!meta) return null;
   const status = getStatus(metricKey, value);
@@ -60,8 +73,8 @@ export default function VitalTile({ metricKey, value, index = 0 }) {
       transition={{ delay: index * 0.06, duration: 0.4 }}
       className="relative rounded-xl p-3 flex flex-col gap-1 overflow-hidden"
       style={{
-        background: s.bg,
-        border: `1px solid ${s.border}`,
+        background: isDark ? s.bg : `${s.bg.replace('0.05', '0.08').replace('0.07', '0.1')}`,
+        border: `1px solid ${isDark ? s.border : s.border.replace('0.15', '0.25').replace('0.3', '0.4')}`,
         animation: isCritical ? "criticalBorder 1.5s ease-in-out infinite" : undefined,
       }}
     >
@@ -73,7 +86,7 @@ export default function VitalTile({ metricKey, value, index = 0 }) {
         {meta.icon}
       </div>
 
-      <span className="font-mono text-xs tracking-widest uppercase opacity-40 text-white">
+      <span className={`font-mono text-xs tracking-widest uppercase opacity-40 ${isDark ? 'text-white' : 'text-gray-700'}`}>
         {meta.label}
       </span>
 
@@ -87,11 +100,11 @@ export default function VitalTile({ metricKey, value, index = 0 }) {
         >
           {value != null ? (typeof value === "number" ? value.toFixed(value % 1 === 0 ? 0 : 1) : value) : "—"}
         </motion.span>
-        <span className="font-mono text-xs opacity-40 text-white">{meta.unit}</span>
+        <span className={`font-mono text-xs opacity-40 ${isDark ? 'text-white' : 'text-gray-700'}`}>{meta.unit}</span>
       </div>
 
       {/* Status bar at bottom */}
-      <div className="h-0.5 rounded-full mt-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+      <div className="h-0.5 rounded-full mt-1" style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.1)" }}>
         <motion.div
           className="h-full rounded-full"
           style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }}

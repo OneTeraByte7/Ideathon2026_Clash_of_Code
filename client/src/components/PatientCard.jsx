@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import RiskGauge from "./RiskGauge";
 import VitalTile from "./VitalTile";
 import ECGLine from "./ECGLine";
@@ -12,11 +12,22 @@ const LEVEL_STYLES = {
 
 export default function PatientCard({ patient, onClick, index = 0 }) {
   const [hovered, setHovered] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const level = patient.risk_level || "normal";
   const s = LEVEL_STYLES[level];
   const vitals = patient.vitals || {};
   const isCritical = level === "critical";
   const isWarning = level === "warning";
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.body.classList.contains('light') === false);
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <motion.div
@@ -28,7 +39,7 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
       onClick={onClick}
       className="relative rounded-2xl cursor-pointer overflow-hidden hover:shadow-lg transition-all"
       style={{
-        background: `linear-gradient(135deg, #0d1220, ${s.bg})`,
+        background: isDark ? `linear-gradient(135deg, #0d1220, ${s.bg})` : `linear-gradient(135deg, #ffffff, rgba(248,250,251,0.8))`,
         border: `1px solid ${s.accent}22`,
         animation: isCritical ? "criticalBorder 1.5s ease-in-out infinite"
                  : isWarning  ? "warnBorder 2s ease-in-out infinite"
@@ -71,8 +82,8 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
                 </span>
               )}
             </div>
-            <h3 className="font-display font-bold text-lg text-white leading-tight mb-1">{patient.name}</h3>
-            <p className="text-xs opacity-50 font-mono truncate max-w-[160px]">{patient.diagnosis}</p>
+            <h3 className={`font-display font-bold text-lg ${isDark ? 'text-white' : 'text-gray-900'} leading-tight mb-1`}>{patient.name}</h3>
+            <p className={`text-xs ${isDark ? 'opacity-50' : 'opacity-60'} font-mono truncate max-w-[160px]`}>{patient.diagnosis}</p>
           </div>
 
           <RiskGauge score={patient.current_risk_score || 0} size={92} />

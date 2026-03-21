@@ -55,14 +55,7 @@ export default function Navbar({ connected }) {
     >
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2 sm:gap-3 group hover:opacity-80 transition-opacity flex-shrink-0">
-        <div className="relative w-8 sm:w-9 h-8 sm:h-9">
-          <svg viewBox="0 0 32 32" className="w-8 sm:w-9 h-8 sm:h-9">
-            <circle cx="16" cy="16" r="14" fill="none" stroke={isDark ? "#00f5d4" : "#06b6d4"} strokeWidth="1.5" opacity="0.5" />
-            <circle cx="16" cy="16" r="9" fill="none" stroke={isDark ? "#00f5d4" : "#06b6d4"} strokeWidth="1" opacity="0.7" />
-            <path d="M8 16 L13 16 L15 11 L17 21 L19 16 L24 16" fill="none" stroke={isDark ? "#00f5d4" : "#06b6d4"} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          <div className="absolute inset-0 rounded-full animate-ping opacity-15" style={{ background: isDark ? "#00f5d4" : "#06b6d4", animationDuration: "2.5s" }} />
-        </div>
+        <img src="/logo.png" alt="Asclepius" className="w-8 sm:w-9 h-8 sm:h-9 object-contain" />
         <div className="hidden sm:block">
           <div className={`font-display font-bold text-sm sm:text-base tracking-widest group-hover:text-plasma transition-colors ${isDark ? 'text-white' : 'text-gray-900'}`}>
             ASCLEPIUS

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
 const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -16,10 +17,24 @@ function getLabel(score) {
 }
 
 export default function RiskGauge({ score = 0, size = 140 }) {
+  const [isDark, setIsDark] = useState(true);
+  
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.body.classList.contains('light') === false);
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   const color = getColor(score);
   const label = getLabel(score);
   const offset = CIRCUMFERENCE - (score / 100) * CIRCUMFERENCE;
   const isCritical = score >= 70;
+  const trackColor = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.1)";
+  const labelColor = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)";
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -35,7 +50,7 @@ export default function RiskGauge({ score = 0, size = 140 }) {
         {/* Track */}
         <circle
           cx={size / 2} cy={size / 2} r={RADIUS}
-          fill="none" stroke="rgba(255,255,255,0.05)"
+          fill="none" stroke={trackColor}
           strokeWidth="8"
         />
         {/* Progress */}
@@ -66,7 +81,7 @@ export default function RiskGauge({ score = 0, size = 140 }) {
         </motion.span>
         <span
           className="font-mono tracking-widest uppercase"
-          style={{ fontSize: size * 0.095, color: "rgba(255,255,255,0.4)", marginTop: 2 }}
+          style={{ fontSize: size * 0.095, color: labelColor, marginTop: 2 }}
         >
           {label}
         </span>

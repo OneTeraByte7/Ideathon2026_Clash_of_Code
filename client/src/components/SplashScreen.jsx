@@ -23,11 +23,11 @@ export default function SplashScreen({ onComplete }) {
       } else {
         clearInterval(interval);
         setTimeout(() => setDone(true), 500);
-        setTimeout(() => onComplete(), 1200);
+        setTimeout(() => onComplete?.(), 1200);
       }
     }, 280);
     return () => clearInterval(interval);
-  }, []);
+  }, [onComplete]);
 
   return (
     <AnimatePresence>

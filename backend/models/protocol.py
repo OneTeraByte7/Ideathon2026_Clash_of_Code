@@ -1,32 +1,32 @@
-from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey, Boolean, Text
-from sqlalchemy.orm import relationship
+from beanie import Document
+from pydantic import Field
 from datetime import datetime, timezone
-from db.database import Base
+from typing import Optional
+from beanie import PydanticObjectId
 
 
-class Protocol(Base):
-    __tablename__ = "protocols"
-
-    id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
-    alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=True)
-
-    risk_score = Column(Float)
-    gemini_recommendation = Column(Text)    # Full Gemini markdown output
-    antibiotic_suggestion = Column(Text)    # Extracted antibiotic plan
-    immediate_actions = Column(Text)        # Bullet list of actions
-    rationale = Column(Text)               # Clinical reasoning
-
+class Protocol(Document):
+    patient_id: PydanticObjectId
+    alert_id: Optional[PydanticObjectId] = None
+    
+    risk_score: float
+    gemini_recommendation: str  # Full Gemini markdown output
+    antibiotic_suggestion: str  # Extracted antibiotic plan
+    immediate_actions: str  # Bullet list of actions
+    rationale: str  # Clinical reasoning
+    
     # Doctor review workflow
-    status = Column(String(20), default="pending")  # pending | approved | modified | rejected
-    reviewed_by = Column(String(100), nullable=True)
-    reviewed_at = Column(DateTime, nullable=True)
-    doctor_notes = Column(Text, nullable=True)
-
+    status: str = "pending"  # pending | approved | modified | rejected
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    doctor_notes: Optional[str] = None
+    
     # After doctor approves, nurse is notified
-    nurse_notified = Column(Boolean, default=False)
-    nurse_notified_at = Column(DateTime, nullable=True)
-
-    generated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-    patient = relationship("Patient", back_populates="protocols")
+    nurse_notified: bool = False
+    nurse_notified_at: Optional[datetime] = None
+    
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    class Settings:
+        name = "protocols"
+        indexes = ["patient_id", "status", "generated_at"]

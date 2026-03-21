@@ -1,28 +1,39 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
-from sqlalchemy.orm import relationship
+from beanie import Document
+from pydantic import Field
 from datetime import datetime, timezone
-from db.database import Base
+from typing import Optional
 
 
-class Patient(Base):
-    __tablename__ = "patients"
+class Patient(Document):
+    name: str
+    age: int
+    gender: str
+    bed_number: str = Field(..., unique=True)
+    diagnosis: str
+    allergies: str = ""
+    comorbidities: str = ""
+    is_post_surgical: bool = False
+    is_immunocompromised: bool = False
+    current_risk_score: float = 0.0
+    risk_level: str = "normal"  # normal | warning | critical
+    admitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    age = Column(Integer)
-    gender = Column(String(10))
-    bed_number = Column(String(20), unique=True, index=True)
-    diagnosis = Column(String(200))
-    allergies = Column(String(500), default="")          # comma-separated
-    comorbidities = Column(String(500), default="")      # comma-separated
-    is_post_surgical = Column(Boolean, default=False)
-    is_immunocompromised = Column(Boolean, default=False)
-    current_risk_score = Column(Float, default=0.0)
-    risk_level = Column(String(10), default="normal")    # normal | warning | critical
-    admitted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
-                        onupdate=lambda: datetime.now(timezone.utc))
+    class Settings:
+        name = "patients"
+        indexes = ["bed_number", "risk_level"]
 
-    vitals = relationship("Vital", back_populates="patient", cascade="all, delete-orphan")
-    alerts = relationship("Alert", back_populates="patient", cascade="all, delete-orphan")
-    protocols = relationship("Protocol", back_populates="patient", cascade="all, delete-orphan")
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "John Doe",
+                "age": 45,
+                "gender": "Male",
+                "bed_number": "ICU-101",
+                "diagnosis": "Sepsis suspected",
+                "allergies": "Penicillin",
+                "comorbidities": "Diabetes",
+                "is_post_surgical": False,
+                "is_immunocompromised": False
+            }
+        }

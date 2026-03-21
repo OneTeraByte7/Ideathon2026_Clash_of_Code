@@ -1,10 +1,11 @@
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, String
-from sqlalchemy.orm import relationship
+from beanie import Document
+from pydantic import Field
 from datetime import datetime, timezone
-from db.database import Base
+from typing import Optional
+from beanie import PydanticObjectId
 
 
-class Vital(Base):
+class Vital(Document):
     """
     6 core sepsis prediction metrics:
     1. heart_rate       — tachycardia >90 bpm
@@ -14,25 +15,25 @@ class Vital(Base):
     5. spo2             — oxygen saturation <95%
     6. lactate          — hyperlactatemia >2 mmol/L
     """
-    __tablename__ = "vitals"
-
-    id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=False, index=True)
-
+    
+    patient_id: PydanticObjectId
+    
     # Core 6 metrics
-    heart_rate = Column(Float)           # bpm
-    systolic_bp = Column(Float)          # mmHg
-    respiratory_rate = Column(Float)     # breaths/min
-    temperature = Column(Float)          # Celsius
-    spo2 = Column(Float)                 # percentage
-    lactate = Column(Float)              # mmol/L
-
-    # Computed scores at time of reading
-    risk_score = Column(Float, default=0.0)
-    sofa_score = Column(Float, default=0.0)
-    qsofa_score = Column(Integer, default=0)
-
-    source = Column(String(20), default="monitor")  # monitor | seed_normal | seed_warning | seed_critical
-    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-
-    patient = relationship("Patient", back_populates="vitals")
+    heart_rate: float  # bpm
+    systolic_bp: float  # mmHg
+    respiratory_rate: float  # breaths/min
+    temperature: float  # Celsius
+    spo2: float  # percentage
+    lactate: float  # mmol/L
+    
+    # Computed scores
+    risk_score: float = 0.0
+    sofa_score: float = 0.0
+    qsofa_score: int = 0
+    
+    source: str = "monitor"  # monitor | seed_normal | seed_warning | seed_critical
+    recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    class Settings:
+        name = "vitals"
+        indexes = ["patient_id", "recorded_at", "risk_score"]

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from config import get_settings
-from db.mongo_database import init_db, close_db
+from db.simple_mongo import init_db, close_db
 
 # Routers
 from api.patients import router as patients_router
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Asclepius AI",
-    description="ICU Sepsis Early Warning System — Multi-Agent AI with Gemini RAG + MongoDB Atlas",
+    description="ICU Sepsis Early Warning System — Multi-Agent AI with MongoDB Atlas",
     version="1.0.0",
     lifespan=lifespan,
 )

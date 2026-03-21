@@ -17,14 +17,14 @@ async def list_alerts(
     if level:
         query_filter["level"] = level
     
-    alerts = await Alert.find(query_filter).sort("-triggered_at").limit(limit).to_list()
+    alerts = await Alert.find(query_filter).sort([("triggered_at", -1)]).limit(limit).to_list()
     return [alert.dict() for alert in alerts]
 
 
 @router.get("/patient/{patient_id}")
 async def patient_alerts(patient_id: str):
     from beanie import PydanticObjectId
-    alerts = await Alert.find(Alert.patient_id == PydanticObjectId(patient_id)).sort("-triggered_at").limit(20).to_list()
+    alerts = await Alert.find(Alert.patient_id == PydanticObjectId(patient_id)).sort([("triggered_at", -1)]).limit(20).to_list()
     return [alert.dict() for alert in alerts]
 
 

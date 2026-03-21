@@ -22,14 +22,14 @@ async def list_protocols(
     query_filter = {}
     if status:
         query_filter["status"] = status
-    protocols = await Protocol.find(query_filter).sort("-generated_at").limit(limit).to_list()
+    protocols = await Protocol.find(query_filter).sort([("generated_at", -1)]).limit(limit).to_list()
     return protocols
 
 
 @router.get("/pending")
 async def pending_protocols():
     """All protocols awaiting doctor review."""
-    protocols = await Protocol.find(Protocol.status == "pending").sort("-generated_at").to_list()
+    protocols = await Protocol.find(Protocol.status == "pending").sort([("generated_at", -1)]).to_list()
     return protocols
 
 
@@ -79,5 +79,5 @@ async def review_protocol(
 @router.get("/patient/{patient_id}")
 async def patient_protocols(patient_id: str):
     from beanie import PydanticObjectId
-    protocols = await Protocol.find(Protocol.patient_id == PydanticObjectId(patient_id)).sort("-generated_at").limit(10).to_list()
+    protocols = await Protocol.find(Protocol.patient_id == PydanticObjectId(patient_id)).sort([("generated_at", -1)]).limit(10).to_list()
     return protocols

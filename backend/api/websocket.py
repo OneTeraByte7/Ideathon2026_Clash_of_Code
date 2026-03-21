@@ -42,16 +42,16 @@ async def icu_dashboard_stream(websocket: WebSocket):
 
 
 async def _build_snapshot() -> dict:
-    patients = await Patient.find_all().sort("bed_number", 1).to_list()
+    patients = await Patient.find_all().sort([("bed_number", 1)]).to_list()
 
     patient_data = []
     for p in patients:
         # Latest vital
-        latest_vital = await Vital.find(Vital.patient_id == p.id).sort("-recorded_at").limit(1).to_list()
+        latest_vital = await Vital.find(Vital.patient_id == p.id).sort([("recorded_at", -1)]).limit(1).to_list()
         latest_vital = latest_vital[0] if latest_vital else None
 
         # Active alerts
-        active_alerts = await Alert.find(Alert.patient_id == p.id, Alert.resolved == False).sort("-triggered_at").limit(3).to_list()
+        active_alerts = await Alert.find(Alert.patient_id == p.id, Alert.resolved == False).sort([("triggered_at", -1)]).limit(3).to_list()
 
         patient_data.append({
             "id": str(p.id),

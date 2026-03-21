@@ -38,7 +38,7 @@ async def create_patient(data: PatientCreate):
 
 @router.get("/")
 async def list_patients():
-    patients = await Patient.find_all().sort("bed_number", 1).to_list()
+    patients = await Patient.find_all().sort([("bed_number", 1)]).to_list()
     return patients
 
 
@@ -77,7 +77,7 @@ async def get_vitals_history(
     limit: int = 20,
 ):
     from beanie import PydanticObjectId
-    vitals = await Vital.find(Vital.patient_id == PydanticObjectId(patient_id)).sort("-recorded_at").limit(limit).to_list()
+    vitals = await Vital.find(Vital.patient_id == PydanticObjectId(patient_id)).sort([("recorded_at", -1)]).limit(limit).to_list()
     return vitals
 
 

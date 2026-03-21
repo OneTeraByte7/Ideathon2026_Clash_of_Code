@@ -42,9 +42,30 @@ function getStatus(key, value) {
 }
 
 const STATUS_STYLES = {
-  normal:   { color: "#00f5d4", bg: "rgba(0,245,212,0.05)",   border: "rgba(0,245,212,0.15)" },
-  warning:  { color: "#f59e0b", bg: "rgba(245,158,11,0.07)",  border: "rgba(245,158,11,0.3)" },
-  critical: { color: "#ff2d78", bg: "rgba(255,45,120,0.07)",  border: "rgba(255,45,120,0.35)" },
+  normal:   { 
+    color: "#00f5d4", 
+    colorLight: "#06b6d4",
+    bg: "rgba(0,245,212,0.05)",
+    bgLight: "rgba(6,182,212,0.08)",
+    border: "rgba(0,245,212,0.15)",
+    borderLight: "rgba(6,182,212,0.25)"
+  },
+  warning:  { 
+    color: "#f59e0b", 
+    colorLight: "#eab308",
+    bg: "rgba(245,158,11,0.07)",
+    bgLight: "rgba(234,179,8,0.1)",
+    border: "rgba(245,158,11,0.3)",
+    borderLight: "rgba(234,179,8,0.35)"
+  },
+  critical: { 
+    color: "#ff2d78", 
+    colorLight: "#ec4899",
+    bg: "rgba(255,45,120,0.07)",
+    bgLight: "rgba(236,72,153,0.1)",
+    border: "rgba(255,45,120,0.35)",
+    borderLight: "rgba(236,72,153,0.4)"
+  },
 };
 
 export default function VitalTile({ metricKey, value, index = 0 }) {
@@ -73,15 +94,15 @@ export default function VitalTile({ metricKey, value, index = 0 }) {
       transition={{ delay: index * 0.06, duration: 0.4 }}
       className="relative rounded-xl p-3 flex flex-col gap-1 overflow-hidden"
       style={{
-        background: isDark ? s.bg : `${s.bg.replace('0.05', '0.08').replace('0.07', '0.1')}`,
-        border: `1px solid ${isDark ? s.border : s.border.replace('0.15', '0.25').replace('0.3', '0.4')}`,
+        background: isDark ? s.bg : s.bgLight,
+        border: `1px solid ${isDark ? s.border : s.borderLight}`,
         animation: isCritical ? "criticalBorder 1.5s ease-in-out infinite" : undefined,
       }}
     >
       {/* Icon top-right */}
       <div
         className="absolute top-2 right-3 font-mono text-lg opacity-30"
-        style={{ color: s.color }}
+        style={{ color: isDark ? s.color : s.colorLight }}
       >
         {meta.icon}
       </div>
@@ -96,7 +117,7 @@ export default function VitalTile({ metricKey, value, index = 0 }) {
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           className="font-display font-bold text-2xl leading-none"
-          style={{ color: s.color, textShadow: `0 0 16px ${s.color}88` }}
+          style={{ color: isDark ? s.color : s.colorLight, textShadow: `0 0 16px ${isDark ? s.color : s.colorLight}44` }}
         >
           {value != null ? (typeof value === "number" ? value.toFixed(value % 1 === 0 ? 0 : 1) : value) : "—"}
         </motion.span>
@@ -107,7 +128,7 @@ export default function VitalTile({ metricKey, value, index = 0 }) {
       <div className="h-0.5 rounded-full mt-1" style={{ background: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.1)" }}>
         <motion.div
           className="h-full rounded-full"
-          style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }}
+          style={{ background: isDark ? s.color : s.colorLight, boxShadow: `0 0 6px ${isDark ? s.color : s.colorLight}` }}
           initial={{ width: 0 }}
           animate={{ width: status === "critical" ? "100%" : status === "warning" ? "65%" : "30%" }}
           transition={{ duration: 0.8, ease: "easeOut" }}

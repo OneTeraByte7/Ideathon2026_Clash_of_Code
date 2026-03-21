@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const ToastCtx = createContext(null);
@@ -11,6 +11,17 @@ let toastId = 0;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.body.classList.contains('light') === false);
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const toast = useCallback((message, level = "info", duration = 4000) => {
     const id = ++toastId;
@@ -19,10 +30,10 @@ export function ToastProvider({ children }) {
   }, []);
 
   const LEVEL_STYLES = {
-    info:     { color: "#00f5d4", bg: "rgba(0,245,212,0.08)",    border: "rgba(0,245,212,0.2)",   icon: "◉" },
-    warning:  { color: "#f59e0b", bg: "rgba(245,158,11,0.1)",    border: "rgba(245,158,11,0.3)",  icon: "⚠" },
-    critical: { color: "#ff2d78", bg: "rgba(255,45,120,0.1)",    border: "rgba(255,45,120,0.3)",  icon: "☠" },
-    success:  { color: "#39ff14", bg: "rgba(57,255,20,0.08)",    border: "rgba(57,255,20,0.2)",   icon: "✓" },
+    info:     { color: "#00f5d4", colorLight: "#06b6d4", bg: "rgba(0,245,212,0.08)", bgLight: "rgba(6,182,212,0.1)",    border: "rgba(0,245,212,0.2)", borderLight: "rgba(6,182,212,0.25)",   icon: "◉" },
+    warning:  { color: "#f59e0b", colorLight: "#eab308", bg: "rgba(245,158,11,0.1)", bgLight: "rgba(234,179,8,0.12)",    border: "rgba(245,158,11,0.3)", borderLight: "rgba(234,179,8,0.35)",  icon: "⚠" },
+    critical: { color: "#ff2d78", colorLight: "#ec4899", bg: "rgba(255,45,120,0.1)", bgLight: "rgba(236,72,153,0.12)",    border: "rgba(255,45,120,0.3)", borderLight: "rgba(236,72,153,0.35)",  icon: "☠" },
+    success:  { color: "#39ff14", colorLight: "#84cc16", bg: "rgba(57,255,20,0.08)", bgLight: "rgba(132,204,22,0.1)",    border: "rgba(57,255,20,0.2)", borderLight: "rgba(132,204,22,0.3)",   icon: "✓" },
   };
 
   return (
@@ -41,10 +52,16 @@ export function ToastProvider({ children }) {
                 exit={{ opacity: 0, x: 60, scale: 0.95 }}
                 transition={{ type: "spring", damping: 24, stiffness: 300 }}
                 className="flex items-start gap-3 rounded-xl px-4 py-3"
-                style={{ background: s.bg, border: `1px solid ${s.border}`, backdropFilter: "blur(12px)" }}
+                style={{
+                  background: isDark ? s.bg : s.bgLight,
+                  border: `1px solid ${isDark ? s.border : s.borderLight}`,
+                  backdropFilter: "blur(12px)"
+                }}
               >
-                <span className="mt-0.5 flex-shrink-0" style={{ color: s.color }}>{s.icon}</span>
-                <p className="font-mono text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
+                <span className="mt-0.5 flex-shrink-0" style={{ color: isDark ? s.color : s.colorLight }}>
+                  {s.icon}
+                </span>
+                <p className={`font-mono text-xs leading-relaxed ${isDark ? 'text-white' : 'text-gray-900'}`} style={{ opacity: isDark ? 0.7 : 0.8 }}>
                   {t.message}
                 </p>
               </motion.div>

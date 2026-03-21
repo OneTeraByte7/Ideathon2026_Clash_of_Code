@@ -63,10 +63,14 @@ export default function Dashboard() {
   const selectedPatient = patients.find((p) => p.id === selected) || null;
 
   return (
-    <div className="min-h-screen grid-bg" style={{ paddingTop: "72px" }}>
+    <div className={`min-h-screen grid-bg transition-colors duration-300 ${
+      isDark ? '' : 'bg-gray-50'
+    }`} style={{ paddingTop: "72px" }}>
       {/* Ambient orbs */}
-      <div className="fixed top-32 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.025] pointer-events-none" style={{ background: "#00f5d4" }} />
-      <div className="fixed bottom-32 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.025] pointer-events-none" style={{ background: "#ff2d78" }} />
+      <div className={`fixed top-32 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.025] pointer-events-none`} 
+        style={{ background: isDark ? "#00f5d4" : "#06b6d4" }} />
+      <div className={`fixed bottom-32 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.025] pointer-events-none`} 
+        style={{ background: isDark ? "#ff2d78" : "#ec4899" }} />
 
       <CriticalBanner criticalCount={criticalCount} />
 
@@ -155,7 +159,7 @@ export default function Dashboard() {
                 border: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.08)"
               }}
             >
-              <div className={`flex items-center justify-between pb-2 ${isDark ? 'border-white border-opacity-5' : 'border-gray-300 border-opacity-30'}`}>
+              <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-white border-opacity-5' : 'border-gray-300 border-opacity-30'}`}>
                 <span className={`font-display font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'} tracking-wide`}>LIVE ALERTS</span>
                 <span className="font-mono text-xs px-3 py-1 rounded-full" style={{ background: "rgba(255,45,120,0.12)", color: "#ff2d78", border: "1px solid rgba(255,45,120,0.25)" }}>
                   {alerts.filter(a => !a.resolved).length} active
@@ -182,11 +186,11 @@ export default function Dashboard() {
                           <span className="font-mono text-xs font-bold tracking-widest" style={{ color }}>
                             {a.level?.toUpperCase()}
                           </span>
-                          <span className="font-mono text-xs opacity-40 ml-auto">
+                          <span className={`font-mono text-xs opacity-40 ml-auto ${isDark ? 'text-white' : 'text-gray-600'}`}>
                             {new Date(a.triggered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-                        <p className="font-mono text-xs opacity-50 leading-relaxed pl-4">{a.message}</p>
+                        <p className={`font-mono text-xs opacity-50 leading-relaxed pl-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{a.message}</p>
                       </motion.div>
                     );
                   })

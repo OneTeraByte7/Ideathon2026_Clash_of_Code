@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "./components/Navbar";
 import SplashScreen from "./components/SplashScreen";
 import { ToastProvider } from "./components/Toast";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import AlertsPage from "./pages/AlertsPage";
 import ProtocolsPage from "./pages/ProtocolsPage";
@@ -29,12 +30,16 @@ function PageTransition({ children }) {
 
 function AppInner() {
   const { connected } = useICUStream();
+  const location = useLocation();
+  const isLanding = location.pathname === "/";
+  
   return (
     <>
-      <Navbar connected={connected} />
+      {!isLanding && <Navbar connected={connected} />}
       <PageTransition>
         <Routes>
-          <Route path="/"           element={<Dashboard />} />
+          <Route path="/"           element={<LandingPage />} />
+          <Route path="/dashboard"  element={<Dashboard />} />
           <Route path="/alerts"     element={<AlertsPage />} />
           <Route path="/protocols"  element={<ProtocolsPage />} />
           <Route path="/analytics"  element={<AnalyticsPage />} />
@@ -46,6 +51,12 @@ function AppInner() {
 
 export default function App() {
   const [booted, setBooted] = useState(false);
+
+  useEffect(() => {
+    // Apply theme on app start
+    const savedTheme = localStorage.getItem("asclepius-theme") || "dark";
+    document.body.className = savedTheme === "light" ? "light" : "";
+  }, []);
 
   return (
     <ToastProvider>

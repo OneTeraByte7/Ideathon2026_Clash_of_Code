@@ -2,50 +2,38 @@
 Agent 4: Learning Agent — Asclepius AI
 Tracks prediction accuracy and generates insights about false positives/negatives.
 """
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from models.vital import Vital
 from models.alert import Alert
 from models.patient import Patient
+from beanie import PydanticObjectId
 
 
-async def get_accuracy_report(db: AsyncSession) -> dict:
+async def get_accuracy_report() -> dict:
     """
     Computes prediction statistics:
     - True positives: alert triggered → patient actually deteriorated
     - False positives: alert triggered → patient recovered without sepsis
     - Coverage: % of critical patients who had ≥1 warning alert before critical
     """
-    total_alerts = (await db.execute(select(func.count(Alert.id)))).scalar()
-    resolved_alerts = (await db.execute(
-        select(func.count(Alert.id)).where(Alert.resolved == True)
-    )).scalar()
-
-    critical_alerts = (await db.execute(
-        select(func.count(Alert.id)).where(Alert.level == "critical")
-    )).scalar()
-
-    warning_alerts = (await db.execute(
-        select(func.count(Alert.id)).where(Alert.level == "warning")
-    )).scalar()
+    total_alerts = len(await Alert.find_all().to_list())
+    resolved_alerts = len(await Alert.find(Alert.resolved == True).to_list())
+    critical_alerts = len(await Alert.find(Alert.level == "critical").to_list())
+    warning_alerts = len(await Alert.find(Alert.level == "warning").to_list())
 
     # Average risk score at time of alert
-    avg_risk = (await db.execute(
-        select(func.avg(Alert.risk_score))
-    )).scalar()
+    all_alerts = await Alert.find_all().to_list()
+    avg_risk = sum(a.risk_score for a in all_alerts) / len(all_alerts) if all_alerts else 0
 
     # Score distribution
-    high_confidence = (await db.execute(
-        select(func.count(Alert.id)).where(Alert.risk_score >= 80)
-    )).scalar()
+    high_confidence = len(await Alert.find(Alert.risk_score >= 80).to_list())
 
     return {
         "total_alerts": total_alerts,
         "resolved_alerts": resolved_alerts,
         "critical_alerts": critical_alerts,
         "warning_alerts": warning_alerts,
-        "average_risk_score_at_alert": round(avg_risk or 0, 1),
-        "high_confidence_alerts": high_confidence,  # score ≥ 80
+        "average_risk_score_at_alert": round(avg_risk, 1),
+        "high_confidence_alerts": high_confidence,
         "insights": _generate_insights(total_alerts, critical_alerts, warning_alerts),
     }
 
@@ -67,14 +55,9 @@ def _generate_insights(total: int, critical: int, warning: int) -> list[str]:
     return insights or ["System operating within expected parameters."]
 
 
-async def get_patient_trend(db: AsyncSession, patient_id: int, limit: int = 20) -> dict:
+async def get_patient_trend(patient_id: str, limit: int = 20) -> dict:
     """Returns risk score trend for a patient over last N readings."""
-    vitals = (await db.execute(
-        select(Vital)
-        .where(Vital.patient_id == patient_id)
-        .order_by(Vital.recorded_at)
-        .limit(limit)
-    )).scalars().all()
+    vitals = await Vital.find(Vital.patient_id == PydanticObjectId(patient_id)).sort("recorded_at").limit(limit).to_list()
 
     return {
         "patient_id": patient_id,

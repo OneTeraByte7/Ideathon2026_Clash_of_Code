@@ -11,8 +11,6 @@ This agent wraps the risk engine and adds:
   - Escalation tracking
 """
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
 from datetime import datetime, timezone, timedelta
 
 from models.alert import Alert
@@ -55,23 +53,19 @@ def adapt_score_for_context(result: RiskResult, patient: Patient) -> RiskResult:
     )
 
 
-async def should_suppress_alert(db: AsyncSession, patient_id: int, level: str) -> bool:
+async def should_suppress_alert(patient_id, level: str) -> bool:
     """
     Return True if an identical-level alert was fired in the last DEDUP_WINDOW_MINUTES.
     Prevents alert fatigue from repeated identical signals.
     """
     since = datetime.now(timezone.utc) - timedelta(minutes=DEDUP_WINDOW_MINUTES)
-    result = await db.execute(
-        select(Alert)
-        .where(
-            Alert.patient_id == patient_id,
-            Alert.level == level,
-            Alert.resolved == False,
-            Alert.triggered_at >= since,
-        )
-        .limit(1)
-    )
-    existing = result.scalar_one_or_none()
+    existing = await Alert.find(
+        Alert.patient_id == patient_id,
+        Alert.level == level,
+        Alert.resolved == False,
+        Alert.triggered_at >= since,
+    ).limit(1).to_list()
+    
     if existing:
         logger.info(f"Suppressing duplicate {level} alert for patient {patient_id} (dedup window active)")
         return True
@@ -79,7 +73,6 @@ async def should_suppress_alert(db: AsyncSession, patient_id: int, level: str) -
 
 
 async def score_and_escalate(
-    db: AsyncSession,
     patient: Patient,
     current_vital: VitalReading,
     history: list[VitalReading],

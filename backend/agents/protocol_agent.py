@@ -12,7 +12,6 @@ Designed to run autonomously when risk_score crosses critical threshold (≥70).
 """
 import logging
 from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.patient import Patient
 from models.vital import Vital
@@ -48,7 +47,6 @@ def _build_vitals_snapshot(vital: Vital) -> dict:
 
 
 async def generate_and_persist_protocol(
-    db: AsyncSession,
     patient: Patient,
     vital: Vital,
     alert: Alert,
@@ -83,25 +81,19 @@ async def generate_and_persist_protocol(
         status="pending",
     )
 
-    db.add(protocol)
-    await db.flush()
+    await protocol.insert()
 
     logger.info(f"Protocol #{protocol.id} generated for {patient.name} — awaiting doctor review")
     return protocol
 
 
-async def get_pending_protocols_summary(db: AsyncSession) -> dict:
+async def get_pending_protocols_summary() -> dict:
     """Quick summary for dashboard widget."""
-    from sqlalchemy import select, func
     from models.protocol import Protocol as ProtocolModel
 
-    total = (await db.execute(select(func.count(ProtocolModel.id)))).scalar()
-    pending = (await db.execute(
-        select(func.count(ProtocolModel.id)).where(ProtocolModel.status == "pending")
-    )).scalar()
-    approved = (await db.execute(
-        select(func.count(ProtocolModel.id)).where(ProtocolModel.status == "approved")
-    )).scalar()
+    total = len(await ProtocolModel.find_all().to_list())
+    pending = len(await ProtocolModel.find(ProtocolModel.status == "pending").to_list())
+    approved = len(await ProtocolModel.find(ProtocolModel.status == "approved").to_list())
 
     return {
         "total_protocols": total,

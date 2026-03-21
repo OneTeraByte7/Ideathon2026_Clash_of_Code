@@ -11,8 +11,7 @@ In the hackathon demo this is triggered by:
 """
 import logging
 from datetime import datetime, timezone, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from beanie import PydanticObjectId
 
 from models.patient import Patient
 from models.vital import Vital
@@ -21,19 +20,17 @@ from core.risk_engine import compute_risk, VitalReading
 logger = logging.getLogger("asclepius.monitor")
 
 
-async def analyze_patient_window(db: AsyncSession, patient_id: int, window_minutes: int = 240) -> dict | None:
+async def analyze_patient_window(patient_id, window_minutes: int = 240) -> dict | None:
     """
     Pull last `window_minutes` of vitals for a patient.
     Returns a trend summary used by the risk scorer.
     """
     since = datetime.now(timezone.utc) - timedelta(minutes=window_minutes)
 
-    result = await db.execute(
-        select(Vital)
-        .where(Vital.patient_id == patient_id, Vital.recorded_at >= since)
-        .order_by(Vital.recorded_at)
-    )
-    vitals = result.scalars().all()
+    vitals = await Vital.find(
+        Vital.patient_id == patient_id,
+        Vital.recorded_at >= since
+    ).sort("recorded_at").to_list()
 
     if not vitals:
         return None
@@ -69,7 +66,7 @@ async def analyze_patient_window(db: AsyncSession, patient_id: int, window_minut
     trend = "rising" if last_score > first_score + 5 else "falling" if last_score < first_score - 5 else "stable"
 
     return {
-        "patient_id": patient_id,
+        "patient_id": str(patient_id),
         "window_minutes": window_minutes,
         "reading_count": len(vitals),
         "trend": trend,
@@ -79,17 +76,16 @@ async def analyze_patient_window(db: AsyncSession, patient_id: int, window_minut
     }
 
 
-async def run_monitor_sweep(db: AsyncSession) -> list[dict]:
+async def run_monitor_sweep() -> list[dict]:
     """
     Sweep all patients: analyze their window and log anomalies.
     Called by APScheduler every 30 seconds.
     """
-    result = await db.execute(select(Patient))
-    patients = result.scalars().all()
+    patients = await Patient.find_all().to_list()
 
     summaries = []
     for patient in patients:
-        summary = await analyze_patient_window(db, patient.id)
+        summary = await analyze_patient_window(patient.id)
         if summary:
             if summary["trend"] == "rising" and summary["score_latest"] > 30:
                 logger.warning(

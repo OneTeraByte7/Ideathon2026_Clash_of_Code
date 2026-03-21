@@ -18,11 +18,14 @@ export function useICUStream() {
       };
       ws.onclose = () => {
         setConnected(false);
-        retryRef.current = setTimeout(connect, 3000);
+        retryRef.current = setTimeout(() => {
+          wsRef.current?.close();
+          connect();
+        }, 3000);
       };
       ws.onerror = () => ws.close();
     } catch {
-      retryRef.current = setTimeout(connect, 3000);
+      retryRef.current = setTimeout(() => connect(), 3000);
     }
   }, []);
 

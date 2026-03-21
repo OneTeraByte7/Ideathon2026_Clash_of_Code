@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --plasma: #00f5d4;
+  --pulse: #ff2d78;
+  --warn: #f59e0b;
+  --bio: #39ff14;
+  --ice: #38bdf8;
+  
+  /* Light mode (softer colors) */
+  --plasma-light: #06b6d4;
+  --pulse-light: #ec4899;
+  --warn-light: #eab308;
+  --bio-light: #84cc16;
+  --ice-light: #0ea5e9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Dark mode (default) */
+body {
+  background: #03050a;
+  color: #e2e8f0;
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode */
+body.light {
+  background: #f8fafb;
+  color: #374151;
+}
+
+/* Scanline overlay - Dark */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,245,212,0.008) 2px,
+    rgba(0,245,212,0.008) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Scanline overlay - Light */
+body.light::before {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(6,182,212,0.005) 2px,
+    rgba(6,182,212,0.005) 4px
+  );
+}
+
+/* Grid bg - Dark */
+.grid-bg {
+  background-image: 
+    linear-gradient(rgba(0,245,212,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,212,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Grid bg - Light */
+body.light .grid-bg {
+  background-image: 
+    linear-gradient(rgba(6,182,212,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6,182,212,0.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Glow effects - Dark (less intense) */
+.glow-plasma { box-shadow: 0 0 15px rgba(0,245,212,0.2), 0 0 40px rgba(0,245,212,0.08); }
+.glow-pulse { box-shadow: 0 0 15px rgba(255,45,120,0.3), 0 0 40px rgba(255,45,120,0.1); }
+.glow-warn { box-shadow: 0 0 15px rgba(245,158,11,0.3), 0 0 40px rgba(245,158,11,0.1); }
+.glow-bio { box-shadow: 0 0 15px rgba(57,255,20,0.2), 0 0 30px rgba(57,255,20,0.08); }
+
+/* Glow effects - Light */
+body.light .glow-plasma { box-shadow: 0 0 12px rgba(6,182,212,0.25), 0 0 30px rgba(6,182,212,0.12); }
+body.light .glow-pulse { box-shadow: 0 0 12px rgba(236,72,153,0.25), 0 0 30px rgba(236,72,153,0.12); }
+body.light .glow-warn { box-shadow: 0 0 12px rgba(234,179,8,0.25), 0 0 30px rgba(234,179,8,0.12); }
+body.light .glow-bio { box-shadow: 0 0 12px rgba(132,204,22,0.2), 0 0 25px rgba(132,204,22,0.1); }
+
+/* Text glow - Dark */
+.text-glow-plasma { text-shadow: 0 0 15px rgba(0,245,212,0.5); }
+.text-glow-pulse { text-shadow: 0 0 15px rgba(255,45,120,0.5); }
+
+/* Text glow - Light */
+body.light .text-glow-plasma { text-shadow: 0 0 12px rgba(6,182,212,0.4); }
+body.light .text-glow-pulse { text-shadow: 0 0 12px rgba(236,72,153,0.4); }
+
+/* Scrollbar - Dark */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #080c14; }
+::-webkit-scrollbar-thumb { background: rgba(0,245,212,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,245,212,0.4); }
+
+/* Scrollbar - Light */
+body.light ::-webkit-scrollbar-track { background: #f3f4f6; }
+body.light ::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.3); }
+body.light ::-webkit-scrollbar-thumb:hover { background: rgba(6,182,212,0.5); }
+
+/* Animated border */
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(0,245,212,0.2); }
+  50% { border-color: rgba(0,245,212,0.4); }
+}
+
+@keyframes borderPulseLight {
+  0%, 100% { border-color: rgba(6,182,212,0.25); }
+  50% { border-color: rgba(6,182,212,0.5); }
+}
+
+@keyframes criticalBorder {
+  0%, 100% { border-color: rgba(255,45,120,0.2); box-shadow: 0 0 15px rgba(255,45,120,0.08); }
+  50% { border-color: rgba(255,45,120,0.6); box-shadow: 0 0 25px rgba(255,45,120,0.2); }
+}
+
+@keyframes criticalBorderLight {
+  0%, 100% { border-color: rgba(236,72,153,0.3); box-shadow: 0 0 12px rgba(236,72,153,0.1); }
+  50% { border-color: rgba(236,72,153,0.7); box-shadow: 0 0 20px rgba(236,72,153,0.25); }
+}
+
+@keyframes warnBorder {
+  0%, 100% { border-color: rgba(245,158,11,0.2); }
+  50% { border-color: rgba(245,158,11,0.6); }
+}
+
+@keyframes warnBorderLight {
+  0%, 100% { border-color: rgba(234,179,8,0.3); }
+  50% { border-color: rgba(234,179,8,0.6); }
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes lineScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.12); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.08); }
+  56% { transform: scale(1); }
+}
+
+@keyframes sweep {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-border-plasma { animation: borderPulse 2.5s ease-in-out infinite; }
+body.light .animate-border-plasma { animation: borderPulseLight 2.5s ease-in-out infinite; }
+
+.animate-border-critical { animation: criticalBorder 2s ease-in-out infinite; }
+body.light .animate-border-critical { animation: criticalBorderLight 2s ease-in-out infinite; }
+
+.animate-border-warn { animation: warnBorder 2.5s ease-in-out infinite; }
+body.light .animate-border-warn { animation: warnBorderLight 2.5s ease-in-out infinite; }
+
+.animate-float { animation: floatY 4s ease-in-out infinite; }
+.animate-heartbeat { animation: heartbeat 1.2s ease-in-out infinite; }
+.animate-ripple { animation: ripple 1.5s ease-out infinite; }
+.animate-sweep { animation: sweep 1.5s ease-out forwards; }
+
+/* ECG Line */
+@keyframes ecgMove {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.ecg-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: ecgMove 3s linear infinite;
+}
+
+/* Mobile responsive fixes */
+@media (max-width: 640px) {
+  * { 
+    font-size: calc(100% - 2px);
+  }
+  
+  body {
+    overflow-x: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+}

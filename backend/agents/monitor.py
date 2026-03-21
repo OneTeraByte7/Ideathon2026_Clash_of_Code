@@ -30,7 +30,7 @@ async def analyze_patient_window(patient_id, window_minutes: int = 240) -> dict 
     vitals = await Vital.find(
         Vital.patient_id == patient_id,
         Vital.recorded_at >= since
-    ).sort("recorded_at").to_list()
+    ).sort([("recorded_at", 1)]).to_list()
 
     if not vitals:
         return None

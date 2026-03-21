@@ -57,7 +57,7 @@ def _generate_insights(total: int, critical: int, warning: int) -> list[str]:
 
 async def get_patient_trend(patient_id: str, limit: int = 20) -> dict:
     """Returns risk score trend for a patient over last N readings."""
-    vitals = await Vital.find(Vital.patient_id == PydanticObjectId(patient_id)).sort("recorded_at").limit(limit).to_list()
+    vitals = await Vital.find(Vital.patient_id == PydanticObjectId(patient_id)).sort([("recorded_at", 1)]).limit(limit).to_list()
 
     return {
         "patient_id": patient_id,

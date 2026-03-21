@@ -7,8 +7,6 @@ Handles ingestion of a new vital reading:
 4. Trigger alert + protocol if threshold crossed
 """
 from datetime import datetime, timezone, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
 import logging
 
 from models.patient import Patient
@@ -24,17 +22,11 @@ logger = logging.getLogger("asclepius.vitals_service")
 settings = get_settings()
 
 
-async def ingest_vital(db: AsyncSession, patient_id: int, data: dict, source: str = "monitor") -> Vital:
+async def ingest_vital(patient_id, data: dict, source: str = "monitor") -> Vital:
     """Core pipeline: receive vitals → score → alert if needed."""
 
     # 1. Fetch recent history for trend analysis (last 3 readings)
-    history_rows = await db.execute(
-        select(Vital)
-        .where(Vital.patient_id == patient_id)
-        .order_by(desc(Vital.recorded_at))
-        .limit(3)
-    )
-    history_vitals = history_rows.scalars().all()
+    history_vitals = await Vital.find(Vital.patient_id == patient_id).sort("-recorded_at").limit(3).to_list()
     history = [
         VitalReading(
             heart_rate=v.heart_rate,
@@ -65,11 +57,10 @@ async def ingest_vital(db: AsyncSession, patient_id: int, data: dict, source: st
         qsofa_score=result.qsofa_score,
         source=source,
     )
-    db.add(vital)
-    await db.flush()
+    await vital.insert()
 
     # 4. Update patient risk
-    patient = await db.get(Patient, patient_id)
+    patient = await Patient.get(patient_id)
     old_level = patient.risk_level
     patient.current_risk_score = result.risk_score
     patient.risk_level = result.risk_level
@@ -77,14 +68,13 @@ async def ingest_vital(db: AsyncSession, patient_id: int, data: dict, source: st
 
     # 5. Trigger alert only if level changed or escalated
     if result.risk_level != "normal" and result.risk_level != old_level:
-        await _trigger_alert(db, patient, vital, result)
+        await _trigger_alert(patient, vital, result)
 
-    await db.commit()
-    await db.refresh(vital)
+    await patient.save()
     return vital
 
 
-async def _trigger_alert(db: AsyncSession, patient: Patient, vital: Vital, result) -> None:
+async def _trigger_alert(patient: Patient, vital: Vital, result) -> None:
     alert = Alert(
         patient_id=patient.id,
         vital_id=vital.id,
@@ -92,8 +82,7 @@ async def _trigger_alert(db: AsyncSession, patient: Patient, vital: Vital, resul
         risk_score=result.risk_score,
         message=f"Sepsis {result.risk_level}: score {result.risk_score}. Factors: {', '.join(result.contributing_factors[:3])}",
     )
-    db.add(alert)
-    await db.flush()
+    await alert.insert()
 
     # Notify nurse always (warning + critical)
     nurse_ok = await notify_nurse(
@@ -144,23 +133,24 @@ async def _trigger_alert(db: AsyncSession, patient: Patient, vital: Vital, resul
             rationale=protocol_data["rationale"],
             status="pending",
         )
-        db.add(protocol)
-        await db.flush()
+        await protocol.insert()
 
         doctor_ok = await notify_doctor(
             patient_name=patient.name,
             bed=patient.bed_number,
             risk_score=result.risk_score,
             factors=result.contributing_factors,
-            protocol_id=protocol.id,
+            protocol_id=str(protocol.id),
         )
         alert.doctor_notified = doctor_ok
         alert.doctor_notified_at = datetime.now(timezone.utc) if doctor_ok else None
 
+    await alert.save()
 
-async def approve_protocol(db: AsyncSession, protocol_id: int, reviewed_by: str, notes: str) -> Protocol:
+
+async def approve_protocol(protocol_id, reviewed_by: str, notes: str) -> Protocol:
     """Doctor approves protocol → notify nurse to implement."""
-    protocol = await db.get(Protocol, protocol_id)
+    protocol = await Protocol.get(protocol_id)
     if not protocol:
         raise ValueError(f"Protocol {protocol_id} not found")
 
@@ -169,16 +159,15 @@ async def approve_protocol(db: AsyncSession, protocol_id: int, reviewed_by: str,
     protocol.reviewed_at = datetime.now(timezone.utc)
     protocol.doctor_notes = notes
 
-    patient = await db.get(Patient, protocol.patient_id)
+    patient = await Patient.get(protocol.patient_id)
     nurse_ok = await notify_nurse_protocol_approved(
         patient_name=patient.name,
         bed=patient.bed_number,
-        protocol_id=protocol_id,
+        protocol_id=str(protocol_id),
         doctor_notes=notes,
     )
     protocol.nurse_notified = nurse_ok
     protocol.nurse_notified_at = datetime.now(timezone.utc) if nurse_ok else None
 
-    await db.commit()
-    await db.refresh(protocol)
+    await protocol.save()
     return protocol

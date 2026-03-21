@@ -1,10 +1,10 @@
 """
 Notifier — Asclepius AI
 Dispatches real-time notifications to nurse and doctor.
-Supports: webhooks (Slack/Teams/custom), extensible to SMS.
+Supports: Telegram, webhooks (Slack/Teams/custom), extensible to SMS.
 
-Warning  → Nurse only
-Critical → Nurse + Doctor
+Warning  → Nurse only (Telegram)
+Critical → Nurse + Doctor (Telegram with buttons for doctor)
 """
 import httpx
 import logging
@@ -15,31 +15,6 @@ logger = logging.getLogger("asclepius.notifier")
 settings = get_settings()
 
 
-def _build_nurse_payload(patient_name: str, bed: str, risk_score: float, factors: list, level: str) -> dict:
-    emoji = "🟡" if level == "warning" else "🔴"
-    return {
-        "text": (
-            f"{emoji} *Sepsis {level.upper()} — {patient_name} (Bed {bed})*\n"
-            f"Risk Score: *{risk_score}/100*\n"
-            f"Factors: {', '.join(factors[:3]) or 'See dashboard'}\n"
-            f"Time: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n"
-            f"Action: {'Monitor closely & prepare for escalation' if level == 'warning' else 'IMMEDIATE assessment required — Doctor notified'}"
-        )
-    }
-
-
-def _build_doctor_payload(patient_name: str, bed: str, risk_score: float, factors: list, protocol_id: int) -> dict:
-    return {
-        "text": (
-            f"🔴 *CRITICAL SEPSIS ALERT — {patient_name} (Bed {bed})*\n"
-            f"Risk Score: *{risk_score}/100*\n"
-            f"Factors: {', '.join(factors)}\n"
-            f"AI Protocol ID #{protocol_id} ready for review.\n"
-            f"⚡ Tap to review & approve medication protocol."
-        )
-    }
-
-
 async def notify_nurse(
     patient_name: str,
     bed: str,
@@ -47,8 +22,29 @@ async def notify_nurse(
     factors: list,
     level: str,
 ) -> bool:
-    payload = _build_nurse_payload(patient_name, bed, risk_score, factors, level)
-    return await _dispatch(settings.nurse_webhook_url, payload, "Nurse")
+    """Send warning/critical alert to nurse via Telegram."""
+    if settings.telegram_bot_token and settings.telegram_nurse_chat_id:
+        try:
+            print(f"📤 Sending {level} alert to nurse via Telegram...")
+            message = _build_nurse_message(patient_name, bed, risk_score, factors, level)
+            success = await _send_telegram_message(
+                settings.telegram_nurse_chat_id,
+                message
+            )
+            if success:
+                print(f"✅ Message sent to chat {settings.telegram_nurse_chat_id}")
+                print(f"✅ Nurse notified via Telegram")
+                return True
+            else:
+                print(f"❌ Failed to send to nurse chat {settings.telegram_nurse_chat_id}")
+                return False
+        except Exception as e:
+            logger.error(f"Telegram notification failed: {e}")
+            print(f"❌ Telegram error: {e}")
+            return False
+    else:
+        print(f"❌ Telegram not configured for nurse (token={bool(settings.telegram_bot_token)}, chat_id={settings.telegram_nurse_chat_id})")
+        return False
 
 
 async def notify_doctor(
@@ -56,8 +52,27 @@ async def notify_doctor(
     bed: str,
     risk_score: float,
     factors: list,
-    protocol_id: int,
+    protocol_id: str,
 ) -> bool:
+    """Send critical alert to doctor via Telegram with approval buttons."""
+    # Try Telegram first
+    if settings.telegram_bot_token and settings.telegram_doctor_chat_id:
+        try:
+            print(f"📤 Sending critical alert to doctor via Telegram...")
+            message = _build_doctor_message(patient_name, bed, risk_score, factors)
+            success = await _send_telegram_message_with_buttons(
+                settings.telegram_doctor_chat_id,
+                message,
+                protocol_id
+            )
+            if success:
+                print(f"✅ Doctor notified via Telegram")
+                return True
+        except Exception as e:
+            logger.warning(f"Telegram notification failed: {e}, falling back to webhook")
+            print(f"⚠️ Telegram failed: {e}")
+    
+    # Fallback to webhook
     payload = _build_doctor_payload(patient_name, bed, risk_score, factors, protocol_id)
     return await _dispatch(settings.doctor_webhook_url, payload, "Doctor")
 
@@ -65,9 +80,33 @@ async def notify_doctor(
 async def notify_nurse_protocol_approved(
     patient_name: str,
     bed: str,
-    protocol_id: int,
+    protocol_id: str,
     doctor_notes: str,
 ) -> bool:
+    """Notify nurse that doctor approved the protocol."""
+    # Try Telegram first
+    if settings.telegram_bot_token and settings.telegram_nurse_chat_id:
+        try:
+            print(f"📤 Sending protocol decision to nurse via Telegram...")
+            message = f"""
+✅ **Protocol APPROVED**
+
+👤 Patient: {patient_name}
+🛏️ Bed: {bed}
+
+📝 Doctor Notes: {doctor_notes if doctor_notes else 'No additional notes'}
+
+👨‍⚕️ Action: Implement protocol as decided by doctor
+            """.strip()
+            success = await _send_telegram_message(settings.telegram_nurse_chat_id, message)
+            if success:
+                print(f"✅ Nurse notified of approval via Telegram")
+                return True
+        except Exception as e:
+            logger.warning(f"Telegram notification failed: {e}, falling back to webhook")
+            print(f"⚠️ Telegram failed: {e}")
+    
+    # Fallback to webhook
     payload = {
         "text": (
             f"✅ *Protocol Approved — {patient_name} (Bed {bed})*\n"
@@ -79,7 +118,144 @@ async def notify_nurse_protocol_approved(
     return await _dispatch(settings.nurse_webhook_url, payload, "Nurse (protocol approved)")
 
 
+def _build_nurse_message(patient_name: str, bed: str, risk_score: float, factors: list, level: str) -> str:
+    emoji = "🟡" if level == "warning" else "🔴"
+    return f"""
+{emoji} **{level.upper()} ALERT** - Sepsis Risk Detected
+
+👤 Patient: {patient_name}
+🛏️ Bed: {bed}
+{'⚠️' if level == 'warning' else '🚨'} Risk Score: {risk_score}/100
+📊 Factors: {', '.join(str(f) for f in factors[:3])}
+
+🕐 Time: {datetime.now(timezone.utc).strftime('%H:%M UTC')}
+👨‍⚕️ Action: {'Monitor vitals, prepare for escalation' if level == 'warning' else 'IMMEDIATE assessment required — Doctor notified'}
+    """.strip()
+
+
+def _build_doctor_message(patient_name: str, bed: str, risk_score: float, factors: list) -> str:
+    return f"""
+🔴 **CRITICAL ALERT** - Doctor Action Required
+
+👤 Patient: {patient_name}
+🛏️ Bed: {bed}
+🚨 Risk Score: {risk_score}/100
+📊 Risk Factors: {', '.join(str(f) for f in factors)}
+
+📋 AI-Generated Protocol available
+Click button below to review full protocol
+
+⚠️ You can:
+✅ APPROVE - Execute AI protocol as-is
+❌ REJECT - Request alternative approach
+✏️ MODIFY - Adjust protocol and send to nurse
+    """.strip()
+
+
+def _build_nurse_payload(patient_name: str, bed: str, risk_score: float, factors: list, level: str) -> dict:
+    emoji = "🟡" if level == "warning" else "🔴"
+    return {
+        "text": (
+            f"{emoji} *Sepsis {level.upper()} — {patient_name} (Bed {bed})*\n"
+            f"Risk Score: *{risk_score}/100*\n"
+            f"Factors: {', '.join(str(f) for f in factors[:3]) or 'See dashboard'}\n"
+            f"Time: {datetime.now(timezone.utc).strftime('%H:%M UTC')}\n"
+            f"Action: {'Monitor closely & prepare for escalation' if level == 'warning' else 'IMMEDIATE assessment required — Doctor notified'}"
+        )
+    }
+
+
+def _build_doctor_payload(patient_name: str, bed: str, risk_score: float, factors: list, protocol_id: str) -> dict:
+    return {
+        "text": (
+            f"🔴 *CRITICAL SEPSIS ALERT — {patient_name} (Bed {bed})*\n"
+            f"Risk Score: *{risk_score}/100*\n"
+            f"Factors: {', '.join(str(f) for f in factors)}\n"
+            f"AI Protocol ID #{protocol_id} ready for review.\n"
+            f"⚡ Tap to review & approve medication protocol."
+        )
+    }
+
+
+async def _send_telegram_message(chat_id: str, message: str) -> bool:
+    """Send plain text message to Telegram."""
+    if not chat_id or not settings.telegram_bot_token:
+        logger.warning("Telegram not configured (missing chat_id or bot_token)")
+        print(f"⚠️ Telegram not configured")
+        return False
+    
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    data = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, json=data)
+            result = response.json()
+            if result.get('ok'):
+                print(f"✅ Message sent to chat {chat_id}")
+                logger.info(f"✅ Message sent to chat {chat_id}")
+                return True
+            else:
+                error = result.get('description', 'Unknown error')
+                print(f"❌ Telegram error: {error}")
+                logger.error(f"❌ Telegram error: {error}")
+                return False
+    except Exception as e:
+        print(f"❌ Exception: {e}")
+        logger.error(f"❌ Telegram error: {e}")
+        return False
+
+
+async def _send_telegram_message_with_buttons(chat_id: str, message: str, protocol_id: str) -> bool:
+    """Send message with approve/reject/modify buttons to doctor."""
+    if not chat_id or not settings.telegram_bot_token:
+        logger.warning("Telegram not configured")
+        print(f"⚠️ Telegram not configured")
+        return False
+    
+    url = f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage"
+    data = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown",
+        "reply_markup": {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Approve", "callback_data": f"approve_{protocol_id}"},
+                    {"text": "❌ Reject", "callback_data": f"reject_{protocol_id}"}
+                ],
+                [
+                    {"text": "✏️ Modify", "callback_data": f"modify_{protocol_id}"}
+                ]
+            ]
+        }
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, json=data)
+            result = response.json()
+            if result.get('ok'):
+                print(f"✅ Protocol sent to doctor chat {chat_id}")
+                logger.info(f"✅ Protocol sent to doctor chat {chat_id}")
+                return True
+            else:
+                error = result.get('description', 'Unknown error')
+                print(f"❌ Telegram error: {error}")
+                logger.error(f"❌ Telegram error: {error}")
+                return False
+    except Exception as e:
+        print(f"❌ Exception: {e}")
+        logger.error(f"❌ Telegram error: {e}")
+        return False
+
+
 async def _dispatch(url: str, payload: dict, recipient: str) -> bool:
+    """Dispatch notification via webhook (Slack, Teams, etc)."""
     if not url:
         logger.warning(f"No webhook URL configured for {recipient}. Skipping notification.")
         logger.info(f"[SIMULATED] {recipient} notification: {payload['text'][:100]}...")

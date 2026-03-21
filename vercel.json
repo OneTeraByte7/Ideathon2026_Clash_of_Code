@@ -20,10 +20,5 @@
   ],
   "env": {
     "VITE_API_URL": "https://ideathon2026-clash-of-code.onrender.com"
-  },
-  "functions": {
-    "client/dist/**": {
-      "maxDuration": 10
-    }
   }
 }

@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from datetime import datetime, timezone
 
-from db.database import get_db
 from models.protocol import Protocol
 from services.vitals_service import approve_protocol
 
@@ -20,29 +18,25 @@ class ReviewRequest(BaseModel):
 async def list_protocols(
     status: str | None = None,
     limit: int = 20,
-    db: AsyncSession = Depends(get_db),
 ):
-    query = select(Protocol).order_by(desc(Protocol.generated_at)).limit(limit)
+    query_filter = {}
     if status:
-        query = query.where(Protocol.status == status)
-    result = await db.execute(query)
-    return result.scalars().all()
+        query_filter["status"] = status
+    protocols = await Protocol.find(query_filter).sort("-generated_at").limit(limit).to_list()
+    return protocols
 
 
 @router.get("/pending")
-async def pending_protocols(db: AsyncSession = Depends(get_db)):
+async def pending_protocols():
     """All protocols awaiting doctor review."""
-    result = await db.execute(
-        select(Protocol)
-        .where(Protocol.status == "pending")
-        .order_by(desc(Protocol.generated_at))
-    )
-    return result.scalars().all()
+    protocols = await Protocol.find(Protocol.status == "pending").sort("-generated_at").to_list()
+    return protocols
 
 
 @router.get("/{protocol_id}")
-async def get_protocol(protocol_id: int, db: AsyncSession = Depends(get_db)):
-    protocol = await db.get(Protocol, protocol_id)
+async def get_protocol(protocol_id: str):
+    from beanie import PydanticObjectId
+    protocol = await Protocol.get(PydanticObjectId(protocol_id))
     if not protocol:
         raise HTTPException(404, "Protocol not found")
     return protocol
@@ -50,22 +44,22 @@ async def get_protocol(protocol_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{protocol_id}/review")
 async def review_protocol(
-    protocol_id: int,
+    protocol_id: str,
     body: ReviewRequest,
-    db: AsyncSession = Depends(get_db),
 ):
     """
     Doctor reviews and approves/rejects the Gemini-generated protocol.
     On approval → nurse is automatically notified to implement.
     """
-    protocol = await db.get(Protocol, protocol_id)
+    from beanie import PydanticObjectId
+    protocol = await Protocol.get(PydanticObjectId(protocol_id))
     if not protocol:
         raise HTTPException(404, "Protocol not found")
     if protocol.status != "pending":
         raise HTTPException(400, f"Protocol already {protocol.status}")
 
     if body.action == "approved":
-        updated = await approve_protocol(db, protocol_id, body.reviewed_by, body.notes)
+        updated = await approve_protocol(PydanticObjectId(protocol_id), body.reviewed_by, body.notes)
         return {
             "status": "approved",
             "protocol_id": protocol_id,
@@ -74,21 +68,16 @@ async def review_protocol(
         }
 
     # Modified or rejected — update status without nurse notification
-    from datetime import datetime, timezone
     protocol.status = body.action
     protocol.reviewed_by = body.reviewed_by
     protocol.reviewed_at = datetime.now(timezone.utc)
     protocol.doctor_notes = body.notes
-    await db.commit()
+    await protocol.save()
     return {"status": body.action, "protocol_id": protocol_id}
 
 
 @router.get("/patient/{patient_id}")
-async def patient_protocols(patient_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Protocol)
-        .where(Protocol.patient_id == patient_id)
-        .order_by(desc(Protocol.generated_at))
-        .limit(10)
-    )
-    return result.scalars().all()   
+async def patient_protocols(patient_id: str):
+    from beanie import PydanticObjectId
+    protocols = await Protocol.find(Protocol.patient_id == PydanticObjectId(patient_id)).sort("-generated_at").limit(10).to_list()
+    return protocols

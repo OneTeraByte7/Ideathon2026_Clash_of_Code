@@ -14,11 +14,8 @@ import csv
 import io
 import os
 from pathlib import Path
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from fastapi import APIRouter, UploadFile, File, HTTPException
 
-from db.database import get_db
 from models.patient import Patient
 from services.vitals_service import ingest_vital
 
@@ -85,10 +82,9 @@ def _parse_row(row: dict) -> dict:
     }
 
 
-async def _seed_all_patients(db: AsyncSession, level: str, vitals_list: list[dict]) -> list[dict]:
+async def _seed_all_patients(level: str, vitals_list: list[dict]) -> list[dict]:
     """Apply seed vitals to all active patients. Cycles through vitals_list if fewer rows than patients."""
-    result = await db.execute(select(Patient).order_by(Patient.id))
-    patients = result.scalars().all()
+    patients = await Patient.find_all().to_list()
 
     if not patients:
         raise HTTPException(400, "No patients in database. Create patients first.")
@@ -96,9 +92,9 @@ async def _seed_all_patients(db: AsyncSession, level: str, vitals_list: list[dic
     outcomes = []
     for i, patient in enumerate(patients):
         vitals = vitals_list[i % len(vitals_list)]
-        vital = await ingest_vital(db, patient.id, vitals, source=f"seed_{level}")
+        vital = await ingest_vital(patient.id, vitals, source=f"seed_{level}")
         outcomes.append({
-            "patient_id": patient.id,
+            "patient_id": str(patient.id),
             "patient_name": patient.name,
             "bed": patient.bed_number,
             "risk_score": vital.risk_score,
@@ -112,11 +108,10 @@ async def _seed_all_patients(db: AsyncSession, level: str, vitals_list: list[dic
 @router.post("/normal", summary="🔵 Seed Normal Vitals")
 async def seed_normal(
     csv_file: UploadFile | None = File(default=None),
-    db: AsyncSession = Depends(get_db),
 ):
     """Inject healthy vitals — no alerts triggered."""
     vitals_list = await _load_csv_vitals("normal", csv_file)
-    outcomes = await _seed_all_patients(db, "normal", vitals_list)
+    outcomes = await _seed_all_patients("normal", vitals_list)
     return {
         "seeded": "normal",
         "description": "🔵 All patients showing healthy vitals. No alerts triggered.",
@@ -128,11 +123,10 @@ async def seed_normal(
 @router.post("/warning", summary="🟡 Seed Warning Vitals")
 async def seed_warning(
     csv_file: UploadFile | None = File(default=None),
-    db: AsyncSession = Depends(get_db),
 ):
     """Inject borderline vitals — nurse notifications triggered."""
     vitals_list = await _load_csv_vitals("warning", csv_file)
-    outcomes = await _seed_all_patients(db, "warning", vitals_list)
+    outcomes = await _seed_all_patients("warning", vitals_list)
     return {
         "seeded": "warning",
         "description": "🟡 Borderline sepsis signals. Nurse notified.",
@@ -144,11 +138,10 @@ async def seed_warning(
 @router.post("/critical", summary="🔴 Seed Critical Vitals")
 async def seed_critical(
     csv_file: UploadFile | None = File(default=None),
-    db: AsyncSession = Depends(get_db),
 ):
     """Inject critical vitals — nurse + doctor notified, Gemini protocol generated."""
     vitals_list = await _load_csv_vitals("critical", csv_file)
-    outcomes = await _seed_all_patients(db, "critical", vitals_list)
+    outcomes = await _seed_all_patients("critical", vitals_list)
     return {
         "seeded": "critical",
         "description": "🔴 Critical sepsis signals. Nurse + Doctor notified. Gemini protocol generated.",

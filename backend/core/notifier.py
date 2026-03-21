@@ -23,27 +23,32 @@ async def notify_nurse(
     level: str,
 ) -> bool:
     """Send warning/critical alert to nurse via Telegram."""
-    if settings.telegram_bot_token and settings.telegram_nurse_chat_id:
-        try:
-            print(f"📤 Sending {level} alert to nurse via Telegram...")
-            message = _build_nurse_message(patient_name, bed, risk_score, factors, level)
-            success = await _send_telegram_message(
-                settings.telegram_nurse_chat_id,
-                message
-            )
-            if success:
-                print(f"✅ Message sent to chat {settings.telegram_nurse_chat_id}")
-                print(f"✅ Nurse notified via Telegram")
-                return True
-            else:
-                print(f"❌ Failed to send to nurse chat {settings.telegram_nurse_chat_id}")
-                return False
-        except Exception as e:
-            logger.error(f"Telegram notification failed: {e}")
-            print(f"❌ Telegram error: {e}")
+    if not settings.telegram_bot_token:
+        print(f"⚠️ Telegram bot token not configured")
+        return False
+        
+    if not settings.telegram_nurse_chat_id:
+        print(f"⚠️ Telegram nurse chat ID not configured")
+        return False
+
+    try:
+        print(f"📤 Sending {level} alert to nurse via Telegram...")
+        message = _build_nurse_message(patient_name, bed, risk_score, factors, level)
+        success = await _send_telegram_message(
+            settings.telegram_nurse_chat_id,
+            message
+        )
+        if success:
+            print(f"✅ Nurse notified via Telegram")
+            return True
+        else:
+            print(f"❌ Failed to send to nurse chat {settings.telegram_nurse_chat_id}")
+            print(f"💡 Hint: Check if nurse chat exists and bot has access")
             return False
-    else:
-        print(f"❌ Telegram not configured for nurse (token={bool(settings.telegram_bot_token)}, chat_id={settings.telegram_nurse_chat_id})")
+    except Exception as e:
+        logger.error(f"Telegram notification to nurse failed: {e}")
+        print(f"❌ Telegram error: {e}")
+        print(f"💡 Hint: Verify nurse chat ID and bot permissions")
         return False
 
 
@@ -55,7 +60,6 @@ async def notify_doctor(
     protocol_id: str,
 ) -> bool:
     """Send critical alert to doctor via Telegram with approval buttons."""
-    # Try Telegram first
     if settings.telegram_bot_token and settings.telegram_doctor_chat_id:
         try:
             print(f"📤 Sending critical alert to doctor via Telegram...")
@@ -68,13 +72,16 @@ async def notify_doctor(
             if success:
                 print(f"✅ Doctor notified via Telegram")
                 return True
+            else:
+                print(f"❌ Failed to notify doctor via Telegram")
+                return False
         except Exception as e:
-            logger.warning(f"Telegram notification failed: {e}, falling back to webhook")
-            print(f"⚠️ Telegram failed: {e}")
-    
-    # Fallback to webhook
-    payload = _build_doctor_payload(patient_name, bed, risk_score, factors, protocol_id)
-    return await _dispatch(settings.doctor_webhook_url, payload, "Doctor")
+            logger.error(f"Telegram notification failed: {e}")
+            print(f"❌ Telegram error: {e}")
+            return False
+    else:
+        print(f"❌ Telegram not configured for doctor")
+        return False
 
 
 async def notify_nurse_protocol_approved(
@@ -84,7 +91,6 @@ async def notify_nurse_protocol_approved(
     doctor_notes: str,
 ) -> bool:
     """Notify nurse that doctor approved the protocol."""
-    # Try Telegram first
     if settings.telegram_bot_token and settings.telegram_nurse_chat_id:
         try:
             print(f"📤 Sending protocol decision to nurse via Telegram...")
@@ -102,20 +108,16 @@ async def notify_nurse_protocol_approved(
             if success:
                 print(f"✅ Nurse notified of approval via Telegram")
                 return True
+            else:
+                print(f"❌ Failed to notify nurse via Telegram")
+                return False
         except Exception as e:
-            logger.warning(f"Telegram notification failed: {e}, falling back to webhook")
-            print(f"⚠️ Telegram failed: {e}")
-    
-    # Fallback to webhook
-    payload = {
-        "text": (
-            f"✅ *Protocol Approved — {patient_name} (Bed {bed})*\n"
-            f"Protocol #{protocol_id} approved by doctor.\n"
-            f"Notes: {doctor_notes or 'No additional notes'}\n"
-            f"Please implement the medication orders now."
-        )
-    }
-    return await _dispatch(settings.nurse_webhook_url, payload, "Nurse (protocol approved)")
+            logger.error(f"Telegram notification failed: {e}")
+            print(f"❌ Telegram error: {e}")
+            return False
+    else:
+        print(f"❌ Telegram not configured for nurse")
+        return False
 
 
 def _build_nurse_message(patient_name: str, bed: str, risk_score: float, factors: list, level: str) -> str:
@@ -201,8 +203,18 @@ async def _send_telegram_message(chat_id: str, message: str) -> bool:
                 return True
             else:
                 error = result.get('description', 'Unknown error')
+                error_code = result.get('error_code', 'Unknown')
                 print(f"❌ Telegram error: {error}")
-                logger.error(f"❌ Telegram error: {error}")
+                logger.error(f"❌ Telegram error (code {error_code}): {error}")
+                
+                # Provide helpful hints for common errors
+                if "chat not found" in error.lower():
+                    print(f"💡 Chat {chat_id} not found. Bot may have been removed from chat or chat deleted.")
+                elif "bot was blocked" in error.lower():
+                    print(f"💡 Bot was blocked by user in chat {chat_id}")
+                elif "not enough rights" in error.lower():
+                    print(f"💡 Bot lacks permission to send messages in chat {chat_id}")
+                
                 return False
     except Exception as e:
         print(f"❌ Exception: {e}")

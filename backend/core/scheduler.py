@@ -8,9 +8,9 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from db.database import AsyncSessionLocal
-from agents.monitor import run_monitor_sweep
+from agents.monitor import analyze_patient_window
 from services.alert_service import auto_resolve_stale_alerts
+from models.patient import Patient
 
 logger = logging.getLogger("asclepius.scheduler")
 
@@ -18,19 +18,28 @@ _scheduler: AsyncIOScheduler | None = None
 
 
 async def _monitor_job():
-    async with AsyncSessionLocal() as db:
-        summaries = await run_monitor_sweep(db)
-        if summaries:
-            rising = [s for s in summaries if s["trend"] == "rising"]
-            if rising:
-                logger.info(f"Monitor sweep: {len(rising)} patient(s) on rising trend")
+    """Sweep all patients and check for worsening trends"""
+    try:
+        patients = await Patient.find_all().to_list()
+        rising_count = 0
+        for patient in patients:
+            summary = await analyze_patient_window(patient.id)
+            if summary and summary.get("trend") == "rising":
+                rising_count += 1
+        if rising_count > 0:
+            logger.info(f"Monitor sweep: {rising_count} patient(s) on rising trend")
+    except Exception as e:
+        logger.error(f"Monitor job failed: {e}")
 
 
 async def _auto_resolve_job():
-    async with AsyncSessionLocal() as db:
-        count = await auto_resolve_stale_alerts(db)
+    """Auto-resolve stale warning alerts"""
+    try:
+        count = await auto_resolve_stale_alerts()
         if count:
             logger.info(f"Auto-resolved {count} stale warning alert(s)")
+    except Exception as e:
+        logger.error(f"Auto-resolve job failed: {e}")
 
 
 def start_scheduler():

@@ -28,6 +28,11 @@ async def get_db():
     return database
 
 
+def get_db_connection():
+    """Get database connection (non-async version for compatibility)"""
+    return database
+
+
 async def close_db():
     """Close database connection"""
     client.close()

@@ -10,12 +10,12 @@ from models.patient import Patient
 
 
 async def get_active_alerts(limit: int = 50) -> list[Alert]:
-    alerts = await Alert.find(Alert.resolved == False).sort("-triggered_at").limit(limit).to_list()
+    alerts = await Alert.find(Alert.resolved == False).sort([("triggered_at", -1)]).limit(limit).to_list()
     return alerts
 
 
 async def get_alerts_by_level(level: str, limit: int = 20) -> list[Alert]:
-    alerts = await Alert.find(Alert.level == level, Alert.resolved == False).sort("-triggered_at").limit(limit).to_list()
+    alerts = await Alert.find(Alert.level == level, Alert.resolved == False).sort([("triggered_at", -1)]).limit(limit).to_list()
     return alerts
 
 

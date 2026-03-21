@@ -26,7 +26,7 @@ async def ingest_vital(patient_id, data: dict, source: str = "monitor") -> Vital
     """Core pipeline: receive vitals → score → alert if needed."""
 
     # 1. Fetch recent history for trend analysis (last 3 readings)
-    history_vitals = await Vital.find(Vital.patient_id == patient_id).sort("-recorded_at").limit(3).to_list()
+    history_vitals = await Vital.find(Vital.patient_id == patient_id).sort([("recorded_at", -1)]).limit(3).to_list()
     history = [
         VitalReading(
             heart_rate=v.heart_rate,

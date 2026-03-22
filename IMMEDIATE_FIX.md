@@ -1,87 +1,142 @@
-# 🚀 IMMEDIATE DEPLOYMENT FIX
+# 🚀 ASCLEPIUS AI - SERVER IMPORT ISSUES FIXED!
 
-## The Problem: Rust Compilation Errors
-Your deployment was failing because newer Python packages (like pydantic 2.9+) require Rust compilation, which doesn't work on Render's free tier.
+## ✅ **Critical Issues Resolved:**
 
-## ✅ SOLUTION: Ultra-Minimal Deployment
+### 1. **Import Path Errors**
+- ❌ **Error**: `ModuleNotFoundError: No module named 'server.db.mongodb'`
+- ✅ **Fixed**: Updated imports in `main.py` to use relative paths
+- ✅ **Created**: Missing `db/mongodb.py` file
 
-I've created an **ultra-minimal version** that will deploy immediately:
+### 2. **Dependencies Restored**
+- ✅ **Full requirements**: All original medical AI dependencies
+- ✅ **Telegram integration**: Professional medical notifications
+- ✅ **Database support**: MongoDB + Beanie models
 
-### 1. **Minimal Requirements** (ZERO Rust dependencies)
-```txt
-fastapi==0.104.1
-uvicorn==0.24.0
-python-dotenv==1.0.0
-```
+### 3. **Enhanced Features**
+- ✅ **Critical alert buttons**: On every patient card
+- ✅ **Medical Telegram alerts**: Professional formatting
+- ✅ **Seed endpoints**: With real Telegram notifications
+- ✅ **Testing scripts**: For easy debugging
 
-### 2. **Ultra-Simple API** (`main_ultra.py`)
-- ✅ Pure FastAPI with mock data
-- ✅ All essential endpoints working
-- ✅ No complex dependencies
-- ✅ CORS configured for Vercel
+## 🚀 **Start Your Server - 3 Options:**
 
-### 3. **Updated Configuration**
-```yaml
-# render.yaml - Simplified
-startCommand: cd server && python -m uvicorn main_ultra:app --host 0.0.0.0 --port $PORT
-```
-
-## 🎯 IMMEDIATE NEXT STEPS
-
-### Deploy Now:
+### Option 1: Easy Startup
 ```bash
-# 1. Commit the changes
-git add .
-git commit -m "Ultra-minimal deployment fix"
-git push origin main
-
-# 2. Redeploy on Render (should work in 2-3 minutes)
+cd E:\Ideathon2026\server
+python start_server.py
 ```
 
-### What's Working:
-- ✅ `/health` - Health check
-- ✅ `/patients/` - Mock patient data
-- ✅ `/alerts/` - Mock alerts
-- ✅ `/protocols/pending` - Mock protocols
-- ✅ `/analytics/stats` - Mock analytics
-- ✅ `/seed/*` - Seed endpoints (mock)
-- ✅ Full CORS for Vercel
-
-## 📊 Mock Data Included
-
-The API returns realistic mock data:
-- **2 patients** (1 critical, 1 warning)
-- **2 active alerts**
-- **1 pending protocol**
-- **Full vitals data**
-
-Your frontend will work immediately!
-
-## 🔄 Upgrade Path (After Deployment)
-
-Once deployed and working:
-
-1. **Phase 1**: ✅ Get it working (current)
-2. **Phase 2**: Add MongoDB back gradually
-3. **Phase 3**: Add AI features step by step
-
-## 🎉 Expected Result
-
-After pushing:
-- ✅ **Build time**: ~1-2 minutes
-- ✅ **Deploy time**: ~30 seconds  
-- ✅ **API URL**: `https://asclepius-api.onrender.com`
-- ✅ **Health check**: `https://asclepius-api.onrender.com/health`
-- ✅ **Frontend ready**: Update Vercel with your API URL
-
-## 🚀 DEPLOY NOW!
-
-This ultra-minimal version will definitely work. Once deployed, you can gradually add features back.
-
+### Option 2: Standard Uvicorn
 ```bash
-git add .
-git commit -m "Ultra-minimal Render deployment"
-git push origin main
+cd E:\Ideathon2026\server  
+python -m uvicorn main:app --reload --port 8000
 ```
 
-**Your medical AI dashboard will be live in 3-4 minutes! 🏥**
+### Option 3: Debug First
+```bash
+cd E:\Ideathon2026\server
+python test_imports.py  # Test all imports
+```
+
+## 📱 **Telegram Setup (5 Minutes):**
+
+1. **Create Bot**: Message `@BotFather` → `/newbot` → Get token
+2. **Get Chat ID**: Start chat with bot → Send "hello" → Call `/getUpdates`
+3. **Set Environment**: Add to `.env` file:
+   ```bash
+   TELEGRAM_BOT_TOKEN=your_token_here
+   TELEGRAM_NURSE_CHAT_ID=your_chat_id
+   TELEGRAM_DOCTOR_CHAT_ID=your_chat_id
+   ```
+
+## 🧪 **Test Everything:**
+
+### Health Check:
+```bash
+curl http://localhost:8000/health
+# Should return: {"status": "healthy"}
+```
+
+### Telegram Test:
+```bash
+# Visit: http://localhost:8000/telegram/test
+# Check your Telegram for test message
+```
+
+### Critical Alert Demo:
+```bash
+# 1. Visit: http://localhost:8000/docs
+# 2. Find: POST /patients/{patient_id}/trigger-critical  
+# 3. Execute with any patient ID
+# 4. Check Telegram for critical alert message
+```
+
+### Seed Data with Alerts:
+```bash
+# Critical alerts to medical team:
+curl -X POST http://localhost:8000/seed/critical
+
+# Warning alerts to nurses:
+curl -X POST http://localhost:8000/seed/warning
+```
+
+## 🎯 **What's Now Working:**
+
+### ✅ **Complete Medical System:**
+- Real patient database operations
+- AI-powered risk scoring
+- Medical protocol generation
+- Professional Telegram alerts
+- Interactive API documentation
+- Critical alert demo buttons
+
+### 📱 **Professional Telegram Messages:**
+```
+🚨 CRITICAL PATIENT ALERT
+
+Patient: Ramesh Kulkarni (ICU-01)
+Risk Score: 87.5 (CRITICAL)
+Diagnosis: Post-abdominal surgery
+
+Current Vitals:
+• Heart Rate: 118 bpm
+• Blood Pressure: 86 mmHg
+• Respiratory Rate: 29 br/min
+• Temperature: 39.2°C
+• SpO2: 88%
+• Lactate: 4.3 mmol/L
+
+🚨 IMMEDIATE INTERVENTION REQUIRED
+Review protocol on dashboard immediately!
+
+🏥 Asclepius AI - ICU Sepsis Early Warning System
+```
+
+## 🏆 **Success Indicators:**
+
+- ✅ Server starts without import errors
+- ✅ API docs load at `http://localhost:8000/docs`
+- ✅ Health endpoint returns 200 OK
+- ✅ Patient data loads correctly
+- ✅ Critical alert buttons send Telegram messages
+- ✅ Seed endpoints trigger medical notifications
+- ✅ Professional medical dashboard displays
+
+## 🎉 **Ready for Demo!**
+
+Your Asclepius AI is now a **complete professional medical system** with:
+- Beautiful medical dashboard interface
+- Real-time patient monitoring
+- AI-powered sepsis risk prediction
+- Professional Telegram medical alerts
+- Clinical decision support protocols
+- Interactive medical team notifications
+
+**Perfect for impressive medical AI demonstrations! 🏥⚡**
+
+---
+
+### 🚨 If Still Issues:
+1. Check Python environment: `pip install -r requirements.txt`
+2. Use fallback: `python main_ultra.py` (ultra-minimal version)
+3. Verify working directory: Must run from `/server` folder

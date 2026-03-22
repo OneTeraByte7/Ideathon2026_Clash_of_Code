@@ -4,6 +4,7 @@ from typing import Optional
 
 from models.patient import Patient
 from models.vital import Vital
+from services.telegram_service import telegram_service
 
 router = APIRouter(prefix="/patients", tags=["Patients"])
 
@@ -79,6 +80,77 @@ async def get_vitals_history(
     from beanie import PydanticObjectId
     vitals = await Vital.find(Vital.patient_id == PydanticObjectId(patient_id)).sort([("recorded_at", -1)]).limit(limit).to_list()
     return vitals
+
+
+@router.post("/{patient_id}/trigger-critical")
+async def trigger_critical_alert(patient_id: str):
+    """
+    🚨 TRIGGER CRITICAL ALERT - FOR DEMO PURPOSES
+    
+    Manually triggers a critical alert for the specified patient
+    and sends Telegram notifications to medical staff.
+    """
+    from beanie import PydanticObjectId
+    from datetime import datetime
+    
+    # Get patient data
+    try:
+        patient = await Patient.get(PydanticObjectId(patient_id))
+    except:
+        raise HTTPException(400, "Invalid patient ID format")
+        
+    if not patient:
+        raise HTTPException(404, "Patient not found")
+    
+    # Get latest vital signs
+    latest_vital = await Vital.find(
+        Vital.patient_id == PydanticObjectId(patient_id)
+    ).sort([("recorded_at", -1)]).limit(1).to_list()
+    
+    # Create patient dict for Telegram service
+    patient_dict = {
+        "name": patient.name,
+        "bed_number": patient.bed_number,
+        "current_risk_score": latest_vital[0].risk_score if latest_vital else 85.0,
+        "diagnosis": patient.diagnosis,
+        "vitals": {
+            "heart_rate": latest_vital[0].heart_rate if latest_vital else 118,
+            "systolic_bp": latest_vital[0].systolic_bp if latest_vital else 86,
+            "respiratory_rate": latest_vital[0].respiratory_rate if latest_vital else 29,
+            "temperature": latest_vital[0].temperature if latest_vital else 39.2,
+            "spo2": latest_vital[0].spo2 if latest_vital else 88,
+            "lactate": latest_vital[0].lactate if latest_vital else 4.3,
+        }
+    }
+    
+    # Send critical alert to medical team
+    try:
+        telegram_results = await telegram_service.send_critical_alert(patient_dict)
+        
+        return {
+            "status": "success",
+            "message": f"🚨 Critical alert triggered for {patient.name}!",
+            "patient": {
+                "id": str(patient.id),
+                "name": patient.name,
+                "bed_number": patient.bed_number,
+                "risk_score": patient_dict["current_risk_score"]
+            },
+            "telegram_notifications": telegram_results,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "success", 
+            "message": f"🚨 Critical alert logged for {patient.name}",
+            "patient": {
+                "id": str(patient.id),
+                "name": patient.name,
+                "bed_number": patient.bed_number,
+            },
+            "telegram_notifications": {"error": str(e)},
+            "note": "Alert processed but Telegram notification failed"
+        }
 
 
 @router.delete("/{patient_id}")

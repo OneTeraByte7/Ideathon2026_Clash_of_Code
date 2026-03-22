@@ -259,33 +259,11 @@ export const triggerCriticalAlert = (patientId) => withFallback(() =>
   { status: "success", message: "🚨 Critical alert triggered! Doctor and Nurse notified via Telegram" }
 );
 
-// WebSocket connection - with graceful fallback
+// WebSocket connection - disabled for deployment stability
 export const createWS = () => {
-  // Disable WebSocket for now to avoid 404 errors
-  const DISABLE_WEBSOCKET = true;
-  
-  if (DISABLE_WEBSOCKET) {
-    console.log("WebSocket disabled, using REST API only");
-    return null;
-  }
-  
-  try {
-    const wsUrl = BASE.replace(/^http/, 'ws') + '/ws';
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      console.log("WebSocket connected successfully");
-    };
-    
-    ws.onerror = (error) => {
-      console.warn("WebSocket connection failed, using mock data mode:", error);
-    };
-    
-    return ws;
-  } catch (error) {
-    console.warn("WebSocket not available, using mock data mode:", error);
-    return null;
-  }
+  // Disable WebSocket for now - using REST API for stability
+  console.log("WebSocket disabled - using REST API polling for updates");
+  return null;
 };
 
 export default API;

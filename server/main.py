@@ -2,11 +2,12 @@
 Asclepius AI — Ultra-minimal version for Render deployment
 Pure FastAPI with mock data, no external dependencies
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
 from datetime import datetime
 import json
+import asyncio
 
 app = FastAPI(
     title="Asclepius AI",
@@ -96,6 +97,41 @@ MOCK_PROTOCOLS = [
     }
 ]
 
+# WebSocket endpoint
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """Simple WebSocket endpoint for real-time updates"""
+    await websocket.accept()
+    try:
+        while True:
+            # Send mock real-time data every 5 seconds
+            data = {
+                "type": "patient_update",
+                "timestamp": datetime.utcnow().isoformat(),
+                "patients": [
+                    {
+                        "id": "pat_001",
+                        "risk_score": 45.2,
+                        "risk_level": "warning",
+                        "vitals": {"heart_rate": 95, "spo2": 94},
+                        "active_alerts": 1
+                    },
+                    {
+                        "id": "pat_002", 
+                        "risk_score": 78.5,
+                        "risk_level": "critical",
+                        "vitals": {"heart_rate": 110, "spo2": 88},
+                        "active_alerts": 2
+                    }
+                ]
+            }
+            await websocket.send_text(json.dumps(data))
+            await asyncio.sleep(5)
+    except WebSocketDisconnect:
+        print("WebSocket client disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+
 # Health endpoints
 @app.get("/", tags=["Health"])
 async def root():
@@ -105,6 +141,7 @@ async def root():
         "version": "1.0.0 (ultra-minimal)",
         "mode": "mock_data",
         "docs": "/docs",
+        "websocket": "/ws"
     }
 
 @app.get("/health", tags=["Health"])

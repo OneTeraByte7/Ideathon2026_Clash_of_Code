@@ -140,13 +140,23 @@ export const seedNormal = () => withFallback(() => API.post("/seed/normal").then
 export const seedWarning = () => withFallback(() => API.post("/seed/warning").then(r => r.data), { status: "success", message: "Warning patients seeded" });
 export const seedCritical = () => withFallback(() => API.post("/seed/critical").then(r => r.data), { status: "success", message: "Critical patients seeded" });
 
-// WebSocket connection
+// WebSocket connection - with graceful fallback
 export const createWS = () => {
   try {
     const wsUrl = BASE.replace(/^http/, 'ws') + '/ws';
-    return new WebSocket(wsUrl);
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log("WebSocket connected successfully");
+    };
+    
+    ws.onerror = (error) => {
+      console.warn("WebSocket connection failed, using mock data mode:", error);
+    };
+    
+    return ws;
   } catch (error) {
-    console.warn("WebSocket connection failed:", error);
+    console.warn("WebSocket not available, using mock data mode:", error);
     return null;
   }
 };

@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import SplashScreen from "./components/SplashScreen";
 import { ToastProvider } from "./components/Toast";
 import LandingPage from "./pages/LandingPage";
+import LandingPageNew from "./pages/LandingPageNew";
 import Dashboard from "./pages/Dashboard";
 import AlertsPage from "./pages/AlertsPage";
 import ProtocolsPage from "./pages/ProtocolsPage";
@@ -31,14 +32,15 @@ function PageTransition({ children }) {
 function AppInner() {
   const { connected } = useICUStream();
   const location = useLocation();
-  const isLanding = location.pathname === "/landing";
+  const isLanding = location.pathname === "/" || location.pathname === "/landing";
   
   return (
     <>
       {!isLanding && <Navbar connected={connected} />}
       <PageTransition>
         <Routes>
-          <Route path="/"           element={<Dashboard />} />
+          <Route path="/"           element={<LandingPageNew />} />
+          <Route path="/dashboard"  element={<Dashboard />} />
           <Route path="/landing"    element={<LandingPage />} />
           <Route path="/alerts"     element={<AlertsPage />} />
           <Route path="/protocols"  element={<ProtocolsPage />} />

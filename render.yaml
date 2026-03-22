@@ -3,16 +3,21 @@ services:
     name: asclepius-api
     env: python
     plan: free
-    buildCommand: cd server && pip install -r requirements-deploy.txt
-    startCommand: cd server && uvicorn main:app --host 0.0.0.0 --port $PORT
+    runtime: python-3.11
+    buildCommand: cd server && pip install --upgrade pip && pip install -r requirements_fixed.txt
+    startCommand: cd server && python -m uvicorn main_fixed:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: CARGO_HOME
+        value: /tmp/cargo
       - key: TELEGRAM_BOT_TOKEN
         value: 7842630384:AAGoSMjP0Eb_R_hJTGaUmxJmfAyiYsKRFpI
       - key: TELEGRAM_NURSE_CHAT_ID
         value: -5144644074
       - key: TELEGRAM_DOCTOR_CHAT_ID  
         value: -5294441613
+      - key: MONGO_URI
+        value: mongodb+srv://sohamdalal:soham123@cluster0.ssnmv.mongodb.net/asclepius_db?retryWrites=true&w=majority
       - key: DEBUG
         value: true

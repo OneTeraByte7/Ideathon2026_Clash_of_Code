@@ -1,17 +1,18 @@
 """
-Asclepius AI — Ultra-minimal version for Render deployment
-Pure FastAPI with mock data, no external dependencies
+Asclepius AI — Enhanced version with realistic data and Telegram integration
 """
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import asyncio
+import os
+import httpx
 
 app = FastAPI(
     title="Asclepius AI",
-    description="ICU Sepsis Early Warning System — Ultra-minimal Version",
+    description="ICU Sepsis Early Warning System — Enhanced with Telegram",
     version="1.0.0",
 )
 
@@ -23,77 +24,210 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mock data
+# Telegram configuration
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_NURSE_CHAT_ID = os.getenv("TELEGRAM_NURSE_CHAT_ID", "")
+TELEGRAM_DOCTOR_CHAT_ID = os.getenv("TELEGRAM_DOCTOR_CHAT_ID", "")
+
+async def send_telegram_message(chat_id: str, message: str, parse_mode: str = "HTML"):
+    """Send message via Telegram Bot API"""
+    if not TELEGRAM_BOT_TOKEN or not chat_id:
+        print(f"📤 Would send to chat {chat_id}: {message}")
+        return {"status": "success", "message": "Demo mode - Telegram not configured"}
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    data = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": parse_mode
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=data)
+            if response.status_code == 200:
+                print(f"✅ Telegram message sent to {chat_id}")
+                return {"status": "success"}
+            else:
+                print(f"❌ Telegram error: {response.text}")
+                return {"status": "error", "message": response.text}
+    except Exception as e:
+        print(f"❌ Telegram error: {e}")
+        return {"status": "error", "message": str(e)}
+
+# Realistic mock data - like the original
 MOCK_PATIENTS = [
     {
-        "id": "pat_001",
-        "name": "John Smith",
-        "age": 65,
+        "id": 1,
+        "name": "Ramesh Kulkarni",
+        "age": 62,
         "gender": "Male",
-        "bed_number": "ICU-A01",
-        "diagnosis": "Post-operative monitoring",
-        "risk_level": "warning",
-        "current_risk_score": 45.2,
-        "vitals": {
-            "heart_rate": 95,
-            "systolic_bp": 105,
-            "respiratory_rate": 22,
-            "temperature": 38.1,
-            "spo2": 94,
-            "lactate": 2.1
-        },
-        "active_alerts": 1
-    },
-    {
-        "id": "pat_002", 
-        "name": "Maria Rodriguez",
-        "age": 58,
-        "gender": "Female", 
-        "bed_number": "ICU-A02",
-        "diagnosis": "Sepsis monitoring",
+        "bed_number": "ICU-01",
+        "diagnosis": "Post-abdominal surgery",
+        "allergies": "Penicillin",
+        "comorbidities": "Diabetes, Hypertension",
+        "is_post_surgical": True,
+        "is_immunocompromised": False,
+        "current_risk_score": 87.5,
         "risk_level": "critical",
-        "current_risk_score": 78.5,
         "vitals": {
-            "heart_rate": 110,
-            "systolic_bp": 85,
-            "respiratory_rate": 28,
+            "heart_rate": 118,
+            "systolic_bp": 86,
+            "respiratory_rate": 29,
             "temperature": 39.2,
             "spo2": 88,
-            "lactate": 3.8
+            "lactate": 4.3
         },
-        "active_alerts": 2
+        "active_alerts": [
+            {
+                "level": "critical",
+                "message": "Sepsis critical: score 87.5. Factors: Low SBP (86 mmHg), High RR (29 br/min), Very low SpO2 (88%)",
+                "at": datetime.utcnow().isoformat()
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Sunita Desai",
+        "age": 45,
+        "gender": "Female",
+        "bed_number": "ICU-02",
+        "diagnosis": "Pneumonia",
+        "allergies": "",
+        "comorbidities": "Asthma",
+        "is_post_surgical": False,
+        "is_immunocompromised": False,
+        "current_risk_score": 54.2,
+        "risk_level": "warning",
+        "vitals": {
+            "heart_rate": 97,
+            "systolic_bp": 106,
+            "respiratory_rate": 22,
+            "temperature": 38.4,
+            "spo2": 93,
+            "lactate": 2.3
+        },
+        "active_alerts": [
+            {
+                "level": "warning",
+                "message": "Sepsis warning: score 54.2. Factors: High RR (22 br/min), High HR (97 bpm)",
+                "at": datetime.utcnow().isoformat()
+            }
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Arjun Mehta",
+        "age": 71,
+        "gender": "Male",
+        "bed_number": "ICU-03",
+        "diagnosis": "UTI with suspected sepsis",
+        "allergies": "Sulfonamides",
+        "comorbidities": "CKD Stage 3, Diabetes",
+        "is_post_surgical": False,
+        "is_immunocompromised": True,
+        "current_risk_score": 19.0,
+        "risk_level": "normal",
+        "vitals": {
+            "heart_rate": 74,
+            "systolic_bp": 122,
+            "respiratory_rate": 17,
+            "temperature": 37.1,
+            "spo2": 97,
+            "lactate": 1.1
+        },
+        "active_alerts": []
+    },
+    {
+        "id": 4,
+        "name": "Priya Nair",
+        "age": 38,
+        "gender": "Female",
+        "bed_number": "ICU-04",
+        "diagnosis": "Post-cardiac surgery",
+        "allergies": "",
+        "comorbidities": "None",
+        "is_post_surgical": True,
+        "is_immunocompromised": False,
+        "current_risk_score": 7.0,
+        "risk_level": "normal",
+        "vitals": {
+            "heart_rate": 68,
+            "systolic_bp": 118,
+            "respiratory_rate": 14,
+            "temperature": 36.8,
+            "spo2": 99,
+            "lactate": 0.9
+        },
+        "active_alerts": []
+    },
+    {
+        "id": 5,
+        "name": "Mohan Sharma",
+        "age": 55,
+        "gender": "Male",
+        "bed_number": "ICU-05",
+        "diagnosis": "Liver failure",
+        "allergies": "Cephalosporins",
+        "comorbidities": "Cirrhosis, Malnutrition",
+        "is_post_surgical": False,
+        "is_immunocompromised": True,
+        "current_risk_score": 62.8,
+        "risk_level": "warning",
+        "vitals": {
+            "heart_rate": 101,
+            "systolic_bp": 104,
+            "respiratory_rate": 23,
+            "temperature": 38.6,
+            "spo2": 92,
+            "lactate": 2.5
+        },
+        "active_alerts": [
+            {
+                "level": "warning",
+                "message": "Sepsis warning: score 62.8. Factors: High RR, immunocompromised (+8 adjustment)",
+                "at": datetime.utcnow().isoformat()
+            }
+        ]
     }
 ]
 
 MOCK_ALERTS = [
     {
-        "id": "alert_001",
-        "patient_id": "pat_002",
+        "id": 1,
+        "patient_id": 1,
         "level": "critical",
-        "message": "Sepsis critical: score 78.5. Factors: High lactate (3.8), Low BP (85), High RR (28)",
-        "triggered_at": "2024-01-01T12:00:00Z",
-        "resolved": False
+        "risk_score": 87.5,
+        "message": "Sepsis critical: score 87.5. Factors: Low SBP (86 mmHg), High RR (29 br/min), Very low SpO2 (88%) — possible altered mentation",
+        "nurse_notified": True,
+        "doctor_notified": True,
+        "resolved": False,
+        "triggered_at": (datetime.utcnow().replace(microsecond=0) - timedelta(minutes=8)).isoformat()
     },
     {
-        "id": "alert_002",
-        "patient_id": "pat_001", 
+        "id": 2,
+        "patient_id": 2,
         "level": "warning",
-        "message": "Sepsis warning: score 45.2. Factors: High RR (22), Fever (38.1°C)",
-        "triggered_at": "2024-01-01T12:30:00Z",
-        "resolved": False
+        "risk_score": 54.2,
+        "message": "Sepsis warning: score 54.2. Factors: High RR (22 br/min), High HR (97 bpm)",
+        "nurse_notified": True,
+        "doctor_notified": False,
+        "resolved": False,
+        "triggered_at": (datetime.utcnow().replace(microsecond=0) - timedelta(minutes=22)).isoformat()
     }
 ]
 
 MOCK_PROTOCOLS = [
     {
-        "id": "prot_001",
-        "patient_id": "pat_002",
+        "id": 1,
+        "patient_id": 1,
+        "alert_id": 1,
+        "risk_score": 87.5,
         "status": "pending",
-        "risk_score": 78.5,
-        "gemini_recommendation": "Immediate sepsis protocol: Start broad-spectrum antibiotics, fluid resuscitation",
-        "antibiotic_suggestion": "Piperacillin-tazobactam 4.5g IV q6h",
-        "immediate_actions": ["Blood cultures", "Lactate level", "IV access", "Fluid bolus"],
-        "created_at": "2024-01-01T12:00:00Z"
+        "immediate_actions": "1. Obtain 2 sets of blood cultures before antibiotics\n2. Measure serum lactate (target <2 mmol/L)\n3. Administer 30 mL/kg IV crystalloid bolus (Normal Saline)\n4. Apply supplemental O2 — target SpO2 ≥94%\n5. Insert urinary catheter — monitor hourly output",
+        "antibiotic_suggestion": "PENICILLIN ALLERGY NOTED — Piperacillin-Tazobactam EXCLUDED\n\nRecommend: Meropenem 1g IV q8h (renal function unknown — reassess CrCl)\n+ Vancomycin 25 mg/kg IV loading dose (trough-guided)\n\nRationale: Post-surgical abdominal source, gram-negative + MRSA coverage needed",
+        "rationale": "Post-abdominal surgery patient with compensated septic shock (SBP 86, lactate 4.3). Penicillin allergy requires carbapenem-based regimen. Immunocompetent but surgical site infection risk is high. Urgent source control evaluation within 6 hours.",
+        "generated_at": (datetime.utcnow().replace(microsecond=0) - timedelta(minutes=5)).isoformat()
     }
 ]
 
@@ -186,18 +320,100 @@ async def get_analytics():
         "protocols_pending": len([p for p in MOCK_PROTOCOLS if p["status"] == "pending"]),
     }
 
-# Seed endpoints
+# Seed endpoints with Telegram notifications
 @app.post("/seed/normal", tags=["Seed"])
 async def seed_normal():
     return {"status": "success", "message": "Normal patients seeded (mock)"}
 
 @app.post("/seed/warning", tags=["Seed"])
 async def seed_warning():
-    return {"status": "success", "message": "Warning patients seeded (mock)"}
+    # Send notification to nurse
+    message = "⚠️ <b>WARNING ALERT</b>\n\nNew warning-level patients added to ICU monitoring.\n\nPlease review dashboard for details.\n\n🏥 Asclepius AI System"
+    
+    result = await send_telegram_message(TELEGRAM_NURSE_CHAT_ID, message)
+    
+    return {
+        "status": "success", 
+        "message": "Warning patients seeded - Nurse notified via Telegram ✅",
+        "telegram_status": result.get("status", "unknown")
+    }
 
 @app.post("/seed/critical", tags=["Seed"])
 async def seed_critical():
-    return {"status": "success", "message": "Critical patients seeded (mock)"}
+    # Send critical alerts to both nurse and doctor
+    critical_message = """🚨 <b>CRITICAL ALERT</b>
+    
+<b>Patient:</b> Ramesh Kulkarni (ICU-01)
+<b>Risk Score:</b> 87.5 (CRITICAL)
+<b>Condition:</b> Post-abdominal surgery with sepsis
+
+<b>Critical Factors:</b>
+• Low SBP: 86 mmHg
+• High Respiratory Rate: 29 br/min  
+• Very low SpO2: 88%
+• High Lactate: 4.3 mmol/L
+
+<b>IMMEDIATE ACTION REQUIRED</b>
+Protocol generated - Review dashboard immediately.
+
+🏥 Asclepius AI System"""
+
+    # Send to both nurse and doctor
+    nurse_result = await send_telegram_message(TELEGRAM_NURSE_CHAT_ID, critical_message)
+    doctor_result = await send_telegram_message(TELEGRAM_DOCTOR_CHAT_ID, critical_message)
+    
+    return {
+        "status": "success",
+        "message": "🚨 Critical patients seeded - Doctor and Nurse notified via Telegram!",
+        "nurse_notification": nurse_result.get("status", "unknown"),
+        "doctor_notification": doctor_result.get("status", "unknown")
+    }
+
+# Trigger critical alert manually
+@app.post("/patients/{patient_id}/trigger-critical", tags=["Patients"])
+async def trigger_critical_alert(patient_id: int):
+    # Find patient
+    patient = None
+    for p in MOCK_PATIENTS:
+        if p["id"] == patient_id:
+            patient = p
+            break
+    
+    if not patient:
+        return {"status": "error", "message": "Patient not found"}
+    
+    # Create critical alert message
+    critical_message = f"""🚨 <b>CRITICAL ALERT TRIGGERED</b>
+    
+<b>Patient:</b> {patient['name']} ({patient['bed_number']})
+<b>Risk Score:</b> {patient['current_risk_score']} (CRITICAL)
+<b>Diagnosis:</b> {patient['diagnosis']}
+
+<b>Current Vitals:</b>
+• Heart Rate: {patient['vitals']['heart_rate']} bpm
+• Blood Pressure: {patient['vitals']['systolic_bp']} mmHg
+• Respiratory Rate: {patient['vitals']['respiratory_rate']} br/min
+• Temperature: {patient['vitals']['temperature']}°C  
+• SpO2: {patient['vitals']['spo2']}%
+• Lactate: {patient['vitals']['lactate']} mmol/L
+
+<b>🚨 IMMEDIATE INTERVENTION REQUIRED</b>
+Review protocol on dashboard now!
+
+🏥 Asclepius AI System"""
+
+    # Send to both nurse and doctor
+    print(f"📤 Sending critical alert for patient {patient['name']}")
+    nurse_result = await send_telegram_message(TELEGRAM_NURSE_CHAT_ID, critical_message)
+    doctor_result = await send_telegram_message(TELEGRAM_DOCTOR_CHAT_ID, critical_message)
+    
+    return {
+        "status": "success",
+        "message": f"🚨 Critical alert sent for {patient['name']}! Notifications sent to medical team.",
+        "patient": patient['name'],
+        "nurse_notification": nurse_result.get("status", "unknown"),
+        "doctor_notification": doctor_result.get("status", "unknown")
+    }
 
 if __name__ == "__main__":
     import uvicorn

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import RiskGauge from "./RiskGauge";
 import VitalTile from "./VitalTile";
 import ECGLine from "./ECGLine";
+import { triggerCriticalAlert } from "../lib/api";
 
 const LEVEL_STYLES = {
   normal:   { accent: "#00f5d4", label: "STABLE",   bg: "rgba(0,245,212,0.03)" },
@@ -13,6 +14,7 @@ const LEVEL_STYLES = {
 export default function PatientCard({ patient, onClick, index = 0 }) {
   const [hovered, setHovered] = useState(false);
   const [isDark, setIsDark] = useState(true);
+  const [alertSending, setAlertSending] = useState(false);
   const level = patient.risk_level || "normal";
   const s = LEVEL_STYLES[level];
   const vitals = patient.vitals || {};
@@ -28,6 +30,20 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
+
+  const handleCriticalAlert = async (e) => {
+    e.stopPropagation(); // Prevent card click
+    setAlertSending(true);
+    
+    try {
+      const result = await triggerCriticalAlert(patient.id);
+      alert(`✅ ${result.message}`);
+    } catch (error) {
+      alert("❌ Failed to send critical alert");
+    } finally {
+      setAlertSending(false);
+    }
+  };
 
   return (
     <motion.div
@@ -109,7 +125,7 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="pt-3 border-t border-white/5"
+            className="pt-3 border-t border-white/5 mb-3"
           >
             {patient.active_alerts.slice(0, 1).map((a, i) => (
               <div key={i} className="flex items-start gap-2.5">
@@ -119,11 +135,36 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
             ))}
           </motion.div>
         )}
+
+        {/* Critical Alert Button */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleCriticalAlert}
+          disabled={alertSending}
+          className="w-full py-2 px-3 rounded-lg font-mono text-xs font-bold tracking-widest transition-all flex items-center justify-center gap-2"
+          style={{
+            background: isCritical ? "#ff2d7820" : "#ff2d7810",
+            border: "1px solid #ff2d7830",
+            color: "#ff2d78",
+          }}
+        >
+          {alertSending ? (
+            <>
+              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+              SENDING...
+            </>
+          ) : (
+            <>
+              🚨 TRIGGER CRITICAL ALERT
+            </>
+          )}
+        </motion.button>
       </div>
 
       {/* Hover expand hint */}
       <AnimatePresence>
-        {hovered && (
+        {hovered && !alertSending && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

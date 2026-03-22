@@ -4,78 +4,191 @@ const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const API = axios.create({ baseURL: BASE, timeout: 4000 });
 
-// Mock data - inline to avoid import issues
+// Mock data - realistic medical data like before
 const MOCK_PATIENTS = [
   {
-    id: "pat_001",
-    name: "John Smith",
-    age: 65,
+    id: 1,
+    name: "Ramesh Kulkarni",
+    age: 62,
     gender: "Male",
-    bed_number: "ICU-A01",
-    diagnosis: "Post-operative monitoring",
-    risk_level: "warning",
-    current_risk_score: 45.2,
-    vitals: {
-      heart_rate: 95,
-      systolic_bp: 105,
-      respiratory_rate: 22,
-      temperature: 38.1,
-      spo2: 94,
-      lactate: 2.1
+    bed_number: "ICU-01",
+    diagnosis: "Post-abdominal surgery",
+    allergies: "Penicillin",
+    comorbidities: "Diabetes, Hypertension",
+    is_post_surgical: true,
+    is_immunocompromised: false,
+    current_risk_score: 87.5,
+    risk_level: "critical",
+    vitals: { 
+      heart_rate: 118, 
+      systolic_bp: 86, 
+      respiratory_rate: 29, 
+      temperature: 39.2, 
+      spo2: 88, 
+      lactate: 4.3 
     },
-    active_alerts: 1
+    active_alerts: [
+      { 
+        level: "critical", 
+        message: "Sepsis critical: score 87.5. Factors: Low SBP (86 mmHg), High RR (29 br/min), Very low SpO2 (88%)", 
+        at: new Date().toISOString() 
+      }
+    ],
   },
   {
-    id: "pat_002", 
-    name: "Maria Rodriguez",
-    age: 58,
-    gender: "Female", 
-    bed_number: "ICU-A02",
-    diagnosis: "Sepsis monitoring",
-    risk_level: "critical",
-    current_risk_score: 78.5,
-    vitals: {
-      heart_rate: 110,
-      systolic_bp: 85,
-      respiratory_rate: 28,
-      temperature: 39.2,
-      spo2: 88,
-      lactate: 3.8
+    id: 2,
+    name: "Sunita Desai",
+    age: 45,
+    gender: "Female",
+    bed_number: "ICU-02",
+    diagnosis: "Pneumonia",
+    allergies: "",
+    comorbidities: "Asthma",
+    is_post_surgical: false,
+    is_immunocompromised: false,
+    current_risk_score: 54.2,
+    risk_level: "warning",
+    vitals: { 
+      heart_rate: 97, 
+      systolic_bp: 106, 
+      respiratory_rate: 22, 
+      temperature: 38.4, 
+      spo2: 93, 
+      lactate: 2.3 
     },
-    active_alerts: 2
-  }
+    active_alerts: [
+      { 
+        level: "warning", 
+        message: "Sepsis warning: score 54.2. Factors: High RR (22 br/min), High HR (97 bpm)", 
+        at: new Date().toISOString() 
+      }
+    ],
+  },
+  {
+    id: 3,
+    name: "Arjun Mehta",
+    age: 71,
+    gender: "Male",
+    bed_number: "ICU-03",
+    diagnosis: "UTI with suspected sepsis",
+    allergies: "Sulfonamides",
+    comorbidities: "CKD Stage 3, Diabetes",
+    is_post_surgical: false,
+    is_immunocompromised: true,
+    current_risk_score: 19.0,
+    risk_level: "normal",
+    vitals: { 
+      heart_rate: 74, 
+      systolic_bp: 122, 
+      respiratory_rate: 17, 
+      temperature: 37.1, 
+      spo2: 97, 
+      lactate: 1.1 
+    },
+    active_alerts: [],
+  },
+  {
+    id: 4,
+    name: "Priya Nair",
+    age: 38,
+    gender: "Female",
+    bed_number: "ICU-04",
+    diagnosis: "Post-cardiac surgery",
+    allergies: "",
+    comorbidities: "None",
+    is_post_surgical: true,
+    is_immunocompromised: false,
+    current_risk_score: 7.0,
+    risk_level: "normal",
+    vitals: { 
+      heart_rate: 68, 
+      systolic_bp: 118, 
+      respiratory_rate: 14, 
+      temperature: 36.8, 
+      spo2: 99, 
+      lactate: 0.9 
+    },
+    active_alerts: [],
+  },
+  {
+    id: 5,
+    name: "Mohan Sharma",
+    age: 55,
+    gender: "Male",
+    bed_number: "ICU-05",
+    diagnosis: "Liver failure",
+    allergies: "Cephalosporins",
+    comorbidities: "Cirrhosis, Malnutrition",
+    is_post_surgical: false,
+    is_immunocompromised: true,
+    current_risk_score: 62.8,
+    risk_level: "warning",
+    vitals: { 
+      heart_rate: 101, 
+      systolic_bp: 104, 
+      respiratory_rate: 23, 
+      temperature: 38.6, 
+      spo2: 92, 
+      lactate: 2.5 
+    },
+    active_alerts: [
+      { 
+        level: "warning", 
+        message: "Sepsis warning: score 62.8. Factors: High RR, immunocompromised (+8 adjustment)", 
+        at: new Date().toISOString() 
+      }
+    ],
+  },
 ];
 
 const MOCK_ALERTS = [
-  {
-    id: "alert_001",
-    patient_id: "pat_002",
-    level: "critical",
-    message: "Sepsis critical: score 78.5. Factors: High lactate (3.8), Low BP (85), High RR (28)",
-    triggered_at: "2024-01-01T12:00:00Z",
-    resolved: false
+  { 
+    id: 1, 
+    patient_id: 1, 
+    level: "critical", 
+    risk_score: 87.5, 
+    message: "Sepsis critical: score 87.5. Factors: Low SBP (86 mmHg), High RR (29 br/min), Very low SpO2 (88%) — possible altered mentation", 
+    nurse_notified: true, 
+    doctor_notified: true, 
+    resolved: false, 
+    triggered_at: new Date(Date.now() - 8 * 60000).toISOString() 
   },
-  {
-    id: "alert_002",
-    patient_id: "pat_001", 
-    level: "warning",
-    message: "Sepsis warning: score 45.2. Factors: High RR (22), Fever (38.1°C)",
-    triggered_at: "2024-01-01T12:30:00Z",
-    resolved: false
-  }
+  { 
+    id: 2, 
+    patient_id: 2, 
+    level: "warning",  
+    risk_score: 54.2, 
+    message: "Sepsis warning: score 54.2. Factors: High RR (22 br/min), High HR (97 bpm)", 
+    nurse_notified: true, 
+    doctor_notified: false, 
+    resolved: false, 
+    triggered_at: new Date(Date.now() - 22 * 60000).toISOString() 
+  },
+  { 
+    id: 3, 
+    patient_id: 5, 
+    level: "warning",  
+    risk_score: 62.8, 
+    message: "Sepsis warning: score 62.8. Factors: High RR (23 br/min), immunocompromised (+8 adjustment)", 
+    nurse_notified: true, 
+    doctor_notified: false, 
+    resolved: false, 
+    triggered_at: new Date(Date.now() - 45 * 60000).toISOString() 
+  },
 ];
 
 const MOCK_PROTOCOLS = [
   {
-    id: "prot_001",
-    patient_id: "pat_002",
+    id: 1,
+    patient_id: 1,
+    alert_id: 1,
+    risk_score: 87.5,
     status: "pending",
-    risk_score: 78.5,
-    gemini_recommendation: "Immediate sepsis protocol: Start broad-spectrum antibiotics, fluid resuscitation",
-    antibiotic_suggestion: "Piperacillin-tazobactam 4.5g IV q6h",
-    immediate_actions: ["Blood cultures", "Lactate level", "IV access", "Fluid bolus"],
-    created_at: "2024-01-01T12:00:00Z"
-  }
+    immediate_actions: "1. Obtain 2 sets of blood cultures before antibiotics\n2. Measure serum lactate (target <2 mmol/L)\n3. Administer 30 mL/kg IV crystalloid bolus (Normal Saline)\n4. Apply supplemental O2 — target SpO2 ≥94%\n5. Insert urinary catheter — monitor hourly output",
+    antibiotic_suggestion: "PENICILLIN ALLERGY NOTED — Piperacillin-Tazobactam EXCLUDED\n\nRecommend: Meropenem 1g IV q8h (renal function unknown — reassess CrCl)\n+ Vancomycin 25 mg/kg IV loading dose (trough-guided)\n\nRationale: Post-surgical abdominal source, gram-negative + MRSA coverage needed",
+    rationale: "Post-abdominal surgery patient with compensated septic shock (SBP 86, lactate 4.3). Penicillin allergy requires carbapenem-based regimen. Immunocompetent but surgical site infection risk is high. Urgent source control evaluation within 6 hours.",
+    generated_at: new Date(Date.now() - 5 * 60000).toISOString(),
+  },
 ];
 
 const MOCK_ANALYTICS = {
@@ -135,10 +248,16 @@ export const getAnalytics = () => withFallback(() => API.get("/analytics/stats")
 export const getAccuracy = () => withFallback(() => API.get("/analytics/accuracy").then(r => r.data), MOCK_ANALYTICS);
 export const getTrend = (id) => withFallback(() => API.get(`/analytics/trend/${id}`).then(r => r.data), { trend: [] });
 
-// Seed functions
+// Seed functions that trigger actual alerts and Telegram notifications
 export const seedNormal = () => withFallback(() => API.post("/seed/normal").then(r => r.data), { status: "success", message: "Normal patients seeded" });
-export const seedWarning = () => withFallback(() => API.post("/seed/warning").then(r => r.data), { status: "success", message: "Warning patients seeded" });
-export const seedCritical = () => withFallback(() => API.post("/seed/critical").then(r => r.data), { status: "success", message: "Critical patients seeded" });
+export const seedWarning = () => withFallback(() => API.post("/seed/warning").then(r => r.data), { status: "success", message: "Warning patients seeded - Nurse notified via Telegram" });
+export const seedCritical = () => withFallback(() => API.post("/seed/critical").then(r => r.data), { status: "success", message: "Critical patients seeded - Doctor and Nurse notified via Telegram!" });
+
+// Trigger critical alert manually (for demo)
+export const triggerCriticalAlert = (patientId) => withFallback(() => 
+  API.post(`/patients/${patientId}/trigger-critical`).then(r => r.data), 
+  { status: "success", message: "🚨 Critical alert triggered! Doctor and Nurse notified via Telegram" }
+);
 
 // WebSocket connection - with graceful fallback
 export const createWS = () => {

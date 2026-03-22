@@ -1,12 +1,11 @@
 """
-Asclepius AI — Full-featured medical AI system with Telegram integration
-Enhanced ICU Sepsis Early Warning System with comprehensive medical protocols
+Asclepius AI — Clean main server file
+Enhanced ICU Sepsis Early Warning System
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
-import asyncio
 import logging
 
 # Configure logging
@@ -42,9 +41,15 @@ async def lifespan(app: FastAPI):
         
         # Initialize Telegram service
         if telegram_service.is_configured():
-            logger.info("📱 Telegram service initialized")
+            logger.info("📱 Telegram service initialized with real mode")
+            # Test connection
+            test_result = await telegram_service.test_connection()
+            if test_result["status"] == "success":
+                logger.info(f"✅ Telegram bot connected: {test_result.get('bot_info', {}).get('username', 'Unknown')}")
+            else:
+                logger.error(f"❌ Telegram bot connection failed: {test_result['message']}")
         else:
-            logger.warning("⚠️ Telegram not configured - using demo mode")
+            logger.error("❌ Telegram not properly configured - check environment variables")
         
     except Exception as e:
         logger.error(f"❌ Startup error: {e}")

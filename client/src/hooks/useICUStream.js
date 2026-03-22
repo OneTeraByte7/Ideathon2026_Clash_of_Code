@@ -4,78 +4,97 @@ import { createWS } from "../lib/api";
 export function useICUStream() {
   const [snapshot, setSnapshot] = useState(null);
   const [connected, setConnected] = useState(false);
+
   const wsRef = useRef(null);
   const retryRef = useRef(null);
-  const maxRetries = useRef(3);
   const retryCount = useRef(0);
+  const connectRef = useRef(null);
+
+  const MAX_RETRIES = 3;
+
+  const cleanup = () => {
+    if (retryRef.current) {
+      clearTimeout(retryRef.current);
+      retryRef.current = null;
+    }
+
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  };
 
   const connect = useCallback(() => {
+    cleanup();
+
     try {
       const ws = createWS();
-      
-      // If WebSocket creation failed, don't retry excessively
+
       if (!ws) {
-        console.log("WebSocket not available, using fallback mode");
+        console.log("WebSocket unavailable, fallback mode");
         setConnected(false);
         return;
       }
-      
+
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log("WebSocket connected");
         setConnected(true);
-        retryCount.current = 0; // Reset retry count on successful connection
+        retryCount.current = 0;
       };
-      
+
       ws.onmessage = (e) => {
-        try { 
-          setSnapshot(JSON.parse(e.data)); 
+        try {
+          setSnapshot(JSON.parse(e.data));
         } catch (err) {
-          console.warn("Failed to parse WebSocket message:", err);
+          console.warn("Invalid WS message:", err);
         }
       };
-      
+
       ws.onclose = () => {
+        console.log("WebSocket closed");
         setConnected(false);
-        console.log("WebSocket disconnected");
-        
-        // Only retry if we haven't exceeded max retries
-        if (retryCount.current < maxRetries.current) {
+
+        if (retryCount.current < MAX_RETRIES) {
+          const delay = 2000 * Math.pow(2, retryCount.current);
           retryCount.current++;
+
           retryRef.current = setTimeout(() => {
-            console.log(`WebSocket retry ${retryCount.current}/${maxRetries.current}`);
-            connect();
-          }, 5000); // Longer delay between retries
+            console.log(
+              `Retry ${retryCount.current}/${MAX_RETRIES} in ${delay}ms`
+            );
+            connectRef.current?.(); // ✅ safe call
+          }, delay);
         } else {
-          console.log("Max WebSocket retries reached, staying in offline mode");
+          console.log("Max retries reached");
         }
       };
-      
-      ws.onerror = (error) => {
-        console.warn("WebSocket error:", error);
+
+      ws.onerror = (err) => {
+        console.warn("WebSocket error:", err);
         ws.close();
       };
-      
-    } catch (error) {
-      console.warn("WebSocket connection failed:", error);
+
+    } catch (err) {
+      console.warn("Connection failed:", err);
       setConnected(false);
-      
-      // Only retry if we haven't exceeded max retries
-      if (retryCount.current < maxRetries.current) {
-        retryCount.current++;
-        retryRef.current = setTimeout(() => connect(), 5000);
-      }
     }
   }, []);
 
+  // ✅ Update ref AFTER render
   useEffect(() => {
-    connect();
-    return () => {
-      clearTimeout(retryRef.current);
-      wsRef.current?.close();
-    };
+    connectRef.current = connect;
   }, [connect]);
+
+  // ✅ Initial connect
+  useEffect(() => {
+    connectRef.current?.();
+
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   return { snapshot, connected };
 }

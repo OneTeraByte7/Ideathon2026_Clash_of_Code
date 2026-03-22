@@ -42,15 +42,26 @@ class TelegramService:
     
     def is_configured(self) -> bool:
         """Check if Telegram is properly configured"""
-        return bool(self.bot_token and (self.nurse_chat_id or self.doctor_chat_id))
+        configured = bool(self.bot_token and (self.nurse_chat_id or self.doctor_chat_id))
+        if not configured:
+            logger.warning("⚠️ Telegram not fully configured:")
+            if not self.bot_token:
+                logger.warning("  - Missing TELEGRAM_BOT_TOKEN")
+            if not self.nurse_chat_id:
+                logger.warning("  - Missing TELEGRAM_NURSE_CHAT_ID") 
+            if not self.doctor_chat_id:
+                logger.warning("  - Missing TELEGRAM_DOCTOR_CHAT_ID")
+        return configured
     
     async def send_message(self, chat_id: str, message: str, parse_mode: str = "HTML", reply_markup: Dict = None) -> Dict[str, Any]:
         """Send a message to a specific chat"""
-        if not self.is_configured() or not chat_id:
-            logger.info(f"📤 DEMO MODE: Would send Telegram message to {chat_id}")
-            logger.info(f"📄 Message preview: {message[:100]}...")
-            logger.info("ℹ️  Configure TELEGRAM_BOT_TOKEN and chat IDs to enable real notifications")
-            return {"status": "demo", "message": "Telegram not configured"}
+        if not self.bot_token:
+            logger.warning("📤 No bot token configured - skipping Telegram message")
+            return {"status": "error", "message": "No bot token configured"}
+            
+        if not chat_id:
+            logger.warning("📤 No chat ID provided - skipping Telegram message")
+            return {"status": "error", "message": "No chat ID provided"}
         
         url = f"{self.base_url}/sendMessage"
         data = {

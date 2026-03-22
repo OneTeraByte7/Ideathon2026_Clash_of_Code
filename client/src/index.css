@@ -30,6 +30,12 @@ body {
 
 /* Light mode */
 body.light {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+/* Light mode */
+body.light {
   background: #f8fafb;
   color: #374151;
 }
@@ -191,6 +197,28 @@ body.light .animate-border-warn { animation: warnBorderLight 2.5s ease-in-out in
   stroke-dasharray: 1000;
   stroke-dashoffset: 1000;
   animation: ecgMove 3s linear infinite;
+}
+
+/* Light Theme Component Overrides */
+body.light .text-white { color: #1e293b !important; }
+body.light .text-slate-400 { color: #64748b !important; }
+body.light .text-slate-300 { color: #475569 !important; }
+body.light .bg-gray-800 { background-color: #f1f5f9 !important; }
+body.light .bg-gray-900 { background-color: #e2e8f0 !important; }
+body.light .border-gray-700 { border-color: #cbd5e1 !important; }
+body.light .border-gray-800 { border-color: #94a3b8 !important; }
+
+/* Light theme navbar */
+body.light nav {
+  background: rgba(248,250,252,0.85) !important;
+  border-bottom: 1px solid rgba(6,182,212,0.15) !important;
+}
+
+/* Light theme cards */
+body.light .card-light {
+  background: rgba(255,255,255,0.8) !important;
+  border: 1px solid rgba(6,182,212,0.2) !important;
+  color: #1e293b !important;
 }
 
 /* Mobile responsive fixes */

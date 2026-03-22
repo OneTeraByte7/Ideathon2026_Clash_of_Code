@@ -31,7 +31,15 @@ export const resolveAlert = (id) =>
 export const triggerCriticalAlert = (patientId) =>
   API.post(`/patients/${patientId}/trigger-critical`).then(r => r.data);
 
-export const createWS = () =>
-  new WebSocket(`${BASE.replace("http", "ws")}/ws/icu`);
+export const createWS = () => {
+  const wsUrl = BASE.replace(/^http/, "ws") + "/ws/icu";
+  console.log("Connecting to WebSocket:", wsUrl);
+  try {
+    return new WebSocket(wsUrl);
+  } catch (error) {
+    console.error("Failed to create WebSocket:", error);
+    return null;
+  }
+};
 
 export default API;

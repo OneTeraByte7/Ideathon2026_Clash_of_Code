@@ -102,11 +102,19 @@ export default function AlertsPage() {
             ) : (
               alerts.map((alert, index) => {
                 const m = LEVEL_META[alert.level] || LEVEL_META.warning;
-                const alertId = String(alert.id || alert._id || `alert-${index}`);
+                // Ensure alertId is always unique and a string for React keys
+                const alertId = alert.id || alert._id;
+                let safeAlertId;
+                
+                if (typeof alertId === 'string' || typeof alertId === 'number') {
+                  safeAlertId = String(alertId);
+                } else {
+                  safeAlertId = `alert-${index}-${Date.now()}`;
+                }
                 
                 return (
                   <motion.div
-                    key={alertId}
+                    key={safeAlertId}
                     layout
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -126,7 +134,7 @@ export default function AlertsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
                         <span className="font-display font-bold text-sm" style={{ color: m.color }}>
-                          {(alert.level || "unknown").toUpperCase()}
+                          {String(alert.level || "unknown").toUpperCase()}
                         </span>
                         <span className="font-mono text-xs opacity-30">
                           PATIENT #{String(alert.patient_id || "N/A")}
@@ -137,18 +145,22 @@ export default function AlertsPage() {
                       </div>
                       <p className="font-mono text-xs text-white opacity-50 leading-relaxed">
                         {(() => {
-                          if (!alert.message) return "No message available";
-                          if (typeof alert.message === "string") return alert.message;
-                          if (typeof alert.message === "object") return JSON.stringify(alert.message);
-                          return String(alert.message);
+                          const message = alert.message;
+                          if (!message) return "No message available";
+                          if (typeof message === "string") return message;
+                          if (typeof message === "number") return String(message);
+                          if (typeof message === "object") {
+                            return JSON.stringify(message, null, 1).replace(/[\n\r]/g, ' ');
+                          }
+                          return String(message);
                         })()}
                       </p>
                       <div className="flex gap-3 mt-2">
                         <span className="font-mono text-xs opacity-20">
-                          Nurse: {alert.nurse_notified ? "✓ notified" : "✗ pending"}
+                          Nurse: {String(alert.nurse_notified) === "true" ? "✓ notified" : "✗ pending"}
                         </span>
                         <span className="font-mono text-xs opacity-20">
-                          Doctor: {alert.doctor_notified ? "✓ notified" : alert.level === "warning" ? "—" : "✗ pending"}
+                          Doctor: {String(alert.doctor_notified) === "true" ? "✓ notified" : alert.level === "warning" ? "—" : "✗ pending"}
                         </span>
                       </div>
                     </div>
@@ -157,17 +169,17 @@ export default function AlertsPage() {
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => handleResolve(alertId)}
-                        disabled={resolving === alertId}
+                        onClick={() => handleResolve(alertId || alert.id || alert._id)}
+                        disabled={resolving === (alertId || alert.id || alert._id)}
                         className="flex-shrink-0 px-3 py-1.5 rounded-lg font-mono text-xs tracking-widest transition-all"
                         style={{
                           background: "rgba(0,245,212,0.08)",
                           border: "1px solid rgba(0,245,212,0.2)",
                           color: "#00f5d4",
-                          opacity: resolving === alertId ? 0.5 : 1,
+                          opacity: resolving === safeAlertId ? 0.5 : 1,
                         }}
                       >
-                        {resolving === alertId ? "..." : "RESOLVE"}
+                        {resolving === (alertId || alert.id || alert._id) ? "..." : "RESOLVE"}
                       </motion.button>
                     )}
                   </motion.div>

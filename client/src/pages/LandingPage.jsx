@@ -1,29 +1,15 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 export default function LandingPage() {
   const [theme, setTheme] = useState("dark");
 
-  useEffect(() => {
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem("asclepius-theme") || "dark";
-    setTheme(savedTheme);
-    applyTheme(savedTheme);
-  }, []);
-
-  const applyTheme = (selectedTheme) => {
-    document.body.className = selectedTheme === "light" ? "light" : "";
-    localStorage.setItem("asclepius-theme", selectedTheme);
-  };
+  const isDark = theme === "dark";
 
   const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    applyTheme(newTheme);
+    setTheme(theme === "dark" ? "light" : "dark");
   };
-
-  const isDark = theme === "dark";
 
   return (
     <div className={`min-h-screen transition-all duration-500 ${
@@ -182,7 +168,7 @@ export default function LandingPage() {
             transition={{ delay: 1.8, duration: 0.8 }}
             className="flex gap-4"
           >
-            <Link to="/">
+            <Link to="/dashboard">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

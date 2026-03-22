@@ -13,7 +13,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import original API routers
+# Import original API routers (without server prefix since we're in server directory)
 from api.patients import router as patients_router
 from api.alerts import router as alerts_router  
 from api.seed import router as seed_router

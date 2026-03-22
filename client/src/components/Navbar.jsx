@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const NAV_LINKS = [
-  { path: "/dashboard", label: "ICU GRID",   icon: "⬡" },
-  { path: "/alerts",    label: "ALERTS",     icon: "◈" },
-  { path: "/protocols", label: "PROTOCOLS",  icon: "⊕" },
-  { path: "/analytics", label: "ANALYTICS",  icon: "≋" },
+  { path: "/",         label: "ICU GRID",   icon: "⬡" },
+  { path: "/alerts",   label: "ALERTS",     icon: "◈" },
+  { path: "/protocols",label: "PROTOCOLS",  icon: "⊕" },
+  { path: "/analytics",label: "ANALYTICS",  icon: "≋" },
 ];
 
 export default function Navbar({ connected }) {
@@ -148,6 +148,7 @@ export default function Navbar({ connected }) {
               ? "hover:bg-[#1a3a4a] text-gray-300 hover:text-[#00f5d4]" 
               : "hover:bg-gray-100 text-gray-600 hover:text-blue-600"
           }`}
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {isDark ? "☀️" : "🌙"}
         </motion.button>

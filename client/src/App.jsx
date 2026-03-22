@@ -31,15 +31,15 @@ function PageTransition({ children }) {
 function AppInner() {
   const { connected } = useICUStream();
   const location = useLocation();
-  const isLanding = location.pathname === "/";
+  const isLanding = location.pathname === "/landing";
   
   return (
     <>
       {!isLanding && <Navbar connected={connected} />}
       <PageTransition>
         <Routes>
-          <Route path="/"           element={<LandingPage />} />
-          <Route path="/dashboard"  element={<Dashboard />} />
+          <Route path="/"           element={<Dashboard />} />
+          <Route path="/landing"    element={<LandingPage />} />
           <Route path="/alerts"     element={<AlertsPage />} />
           <Route path="/protocols"  element={<ProtocolsPage />} />
           <Route path="/analytics"  element={<AnalyticsPage />} />

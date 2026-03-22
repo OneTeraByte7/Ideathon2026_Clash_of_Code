@@ -182,7 +182,7 @@ export default function LandingPage() {
             transition={{ delay: 1.8, duration: 0.8 }}
             className="flex gap-4"
           >
-            <Link to="/dashboard">
+            <Link to="/">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

@@ -142,6 +142,14 @@ export const seedCritical = () => withFallback(() => API.post("/seed/critical").
 
 // WebSocket connection - with graceful fallback
 export const createWS = () => {
+  // Disable WebSocket for now to avoid 404 errors
+  const DISABLE_WEBSOCKET = true;
+  
+  if (DISABLE_WEBSOCKET) {
+    console.log("WebSocket disabled, using REST API only");
+    return null;
+  }
+  
   try {
     const wsUrl = BASE.replace(/^http/, 'ws') + '/ws';
     const ws = new WebSocket(wsUrl);

@@ -38,8 +38,8 @@ function AppInner() {
       {!isLanding && <Navbar connected={connected} />}
       <PageTransition>
         <Routes>
-          <Route path="/"           element={<Dashboard />} />
-          <Route path="/landing"    element={<LandingPage />} />
+          <Route path="/"           element={<LandingPage />} />
+          <Route path="/dashboard"  element={<Dashboard />} />
           <Route path="/alerts"     element={<AlertsPage />} />
           <Route path="/protocols"  element={<ProtocolsPage />} />
           <Route path="/analytics"  element={<AnalyticsPage />} />

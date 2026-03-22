@@ -13,15 +13,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import original API routers (without server prefix since we're in server directory)
+# Import API routers
 from api.patients import router as patients_router
 from api.alerts import router as alerts_router  
 from api.seed import router as seed_router
 from api.protocol import router as protocol_router
 from api.websocket import router as ws_router
 from api.analytics import router as analytics_router
-
-# Import database and services
 from db.mongodb import init_db, close_db
 from services.telegram_service import TelegramService
 from config import get_settings

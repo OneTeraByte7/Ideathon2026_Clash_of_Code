@@ -1,0 +1,12 @@
+# Clean up script - files to remove
+- main_deploy.py
+- main_minimal.py  
+- main_ultra.py
+- main_clean.py
+- requirements-*.txt (keep only requirements.txt)
+- Any _simple.py files in api folder
+
+# Files to keep:
+- main.py (clean version)
+- requirements.txt (fixed dependencies)
+- All original api files without _simple suffix

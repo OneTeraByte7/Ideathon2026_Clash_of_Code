@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const NAV_LINKS = [
-  { path: "/dashboard",    label: "ICU GRID",   icon: "⬡" },
-  { path: "/alerts",       label: "ALERTS",     icon: "◈" },
-  { path: "/protocols",    label: "PROTOCOLS",  icon: "⊕" },
-  { path: "/analytics",    label: "ANALYTICS",  icon: "≋" },
+  { path: "/dashboard", label: "ICU GRID",   icon: "⬡" },
+  { path: "/alerts",    label: "ALERTS",     icon: "◈" },
+  { path: "/protocols", label: "PROTOCOLS",  icon: "⊕" },
+  { path: "/analytics", label: "ANALYTICS",  icon: "≋" },
 ];
 
 export default function Navbar({ connected }) {

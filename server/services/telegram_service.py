@@ -19,12 +19,7 @@ class TelegramService:
         self.bot_token = settings.telegram_bot_token
         self.nurse_chat_id = settings.telegram_nurse_chat_id
         self.doctor_chat_id = settings.telegram_doctor_chat_id
-    def __init__(self):
-        settings = get_settings()
-        self.bot_token = settings.telegram_bot_token
-        self.nurse_chat_id = settings.telegram_nurse_chat_id
-        self.doctor_chat_id = settings.telegram_doctor_chat_id
-        self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
+        self.base_url = f"https://api.telegram.org/bot{self.bot_token}" if self.bot_token else ""
         
         # Debug logging to verify configuration
         logger.info(f"🤖 Telegram Bot Token: {'✅ SET' if self.bot_token else '❌ MISSING'}")
@@ -49,7 +44,7 @@ class TelegramService:
         """Check if Telegram is properly configured"""
         return bool(self.bot_token and (self.nurse_chat_id or self.doctor_chat_id))
     
-    async def send_message(self, chat_id: str, message: str, parse_mode: str = "HTML") -> Dict[str, Any]:
+    async def send_message(self, chat_id: str, message: str, parse_mode: str = "HTML", reply_markup: Dict = None) -> Dict[str, Any]:
         """Send a message to a specific chat"""
         if not self.is_configured() or not chat_id:
             logger.info(f"📤 DEMO MODE: Would send Telegram message to {chat_id}")
@@ -64,6 +59,9 @@ class TelegramService:
             "parse_mode": parse_mode,
             "disable_web_page_preview": True
         }
+        
+        if reply_markup:
+            data["reply_markup"] = reply_markup
         
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
@@ -155,7 +153,7 @@ Please review patient status and vitals.
         return await self.send_to_medical_team(message, level="warning", patient_name=patient.get('name'))
     
     async def send_protocol_alert(self, protocol: Dict[str, Any], patient: Dict[str, Any]) -> Dict[str, Any]:
-        """Send protocol notification to medical team"""
+        """Send protocol notification to medical team with action buttons for doctors"""
         message = f"""📋 <b>MEDICAL PROTOCOL GENERATED</b>
         
 <b>Patient:</b> {patient.get('name', 'Unknown')} ({patient.get('bed_number', 'N/A')})
@@ -171,7 +169,42 @@ Detailed antibiotic recommendations and rationale available.
 <i>Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</i>
 🏥 Asclepius AI - ICU Sepsis Early Warning System"""
 
-        return await self.send_to_medical_team(message, level="critical", patient_name=patient.get('name'))
+        # Create inline buttons for doctor responses (only for critical alerts)
+        doctor_buttons = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Approve Protocol", "callback_data": f"approve_{protocol.get('id', 'unknown')}"},
+                    {"text": "❌ Reject Protocol", "callback_data": f"reject_{protocol.get('id', 'unknown')}"}
+                ],
+                [
+                    {"text": "✏️ Modify Protocol", "callback_data": f"modify_{protocol.get('id', 'unknown')}"},
+                    {"text": "📋 View Details", "callback_data": f"details_{protocol.get('id', 'unknown')}"}
+                ]
+            ]
+        }
+
+        results = {}
+        
+        for staff_type, config in self.medical_staff.items():
+            chat_id = config["chat_id"]
+            
+            if chat_id and "critical" in config["alerts"]:
+                # Add role-specific header
+                role_message = f"📱 <b>Alert for {config['role']}</b>\n\n{message}"
+                
+                # Send with buttons only to doctors
+                reply_markup = doctor_buttons if staff_type == "doctor" else None
+                result = await self.send_message(chat_id, role_message, reply_markup=reply_markup)
+                results[staff_type] = result
+            elif chat_id:
+                # Send without buttons to nurses
+                role_message = f"📱 <b>Alert for {config['role']}</b>\n\n{message}"
+                result = await self.send_message(chat_id, role_message)
+                results[staff_type] = result
+            else:
+                results[staff_type] = {"status": "error", "message": f"No {staff_type} chat ID configured"}
+        
+        return results
     
     async def test_connection(self) -> Dict[str, Any]:
         """Test Telegram bot connection"""

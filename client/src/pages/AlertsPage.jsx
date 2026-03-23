@@ -134,7 +134,7 @@ export default function AlertsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
                         <span className="font-display font-bold text-sm" style={{ color: m.color }}>
-                          {String(alert.level || "unknown").toUpperCase()}
+                          {String(alert.level || "Unknown").toUpperCase()}
                         </span>
                         <span className="font-mono text-xs opacity-30">
                           PATIENT #{String(alert.patient_id || "N/A")}

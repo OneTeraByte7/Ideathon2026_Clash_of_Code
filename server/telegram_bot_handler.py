@@ -109,7 +109,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Extract action and patient/protocol ID
     parts = data.split("_", 1)
     action = parts[0]
-    protocol_id = parts[1] if len(parts) > 1 else "unknown"
+    protocol_id = parts[1] if len(parts) > 1 else "Unknown"
     
     # Acknowledge the button click
     try:

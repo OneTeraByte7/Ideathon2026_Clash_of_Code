@@ -157,7 +157,7 @@ Risk Score: {max(outcomes, key=lambda x: x['risk_score'])['risk_score']:.1f}
 <i>This is a demonstration alert from seed data</i>
 🏥 Asclepius AI - ICU Sepsis Early Warning System"""
             
-            telegram_results = await telegram_service.send_to_medical_team(message, level="critical")
+            telegram_results = await telegram_service.send_to_medical_team(message, level="critical", include_buttons=True)
         
         return {"telegram": telegram_results}
     

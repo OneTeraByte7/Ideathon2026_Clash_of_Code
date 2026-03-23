@@ -29,38 +29,63 @@ export default function Dashboard() {
   const refresh = useCallback(async () => {
     try {
       const [p, a] = await Promise.all([getPatients(), getAlerts()]);
-      setPatients(p);
-      setAlerts(a);
+      // Ensure we always have clean arrays with valid objects
+      const validPatients = Array.isArray(p) ? p.filter(patient => patient && typeof patient === 'object' && patient.id) : [];
+      const validAlerts = Array.isArray(a) ? a.filter(alert => alert && typeof alert === 'object') : [];
+      
+      setPatients(validPatients);
+      setAlerts(validAlerts);
     } catch {
-      // Silently ignore errors
+      // Silently ignore errors but ensure we have arrays
+      setPatients(prev => Array.isArray(prev) ? prev : []);
+      setAlerts(prev => Array.isArray(prev) ? prev : []);
     }
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Merge WS snapshot
+  // Enhanced WebSocket data processing with better error handling
   useEffect(() => {
-    if (!snapshot?.patients) return;
-    setPatients((prev) =>
-      prev.map((p) => {
-        const live = snapshot.patients.find((s) => s.id === p.id);
+    if (!snapshot?.patients || !Array.isArray(snapshot.patients)) return;
+    
+    setPatients((prev) => {
+      // Ensure prev is always an array
+      const validPrev = Array.isArray(prev) ? prev : [];
+      
+      return validPrev.map((p) => {
+        // Skip invalid patient objects
+        if (!p || typeof p !== 'object' || !p.id) return p;
+        
+        const live = snapshot.patients.find((s) => s && s.id === p.id);
         if (!live) return p;
-        return { ...p, current_risk_score: live.risk_score, risk_level: live.risk_level, vitals: live.vitals, active_alerts: live.active_alerts };
-      })
-    );
+        
+        // Safely merge live data
+        return { 
+          ...p, 
+          current_risk_score: live.risk_score ?? p.current_risk_score, 
+          risk_level: live.risk_level || p.risk_level, 
+          vitals: live.vitals || p.vitals, 
+          active_alerts: Array.isArray(live.active_alerts) ? live.active_alerts : (p.active_alerts || [])
+        };
+      }).filter(p => p && p.id); // Remove any invalid entries
+    });
   }, [snapshot]);
 
   const FILTERS = ["all", "critical", "warning", "normal"];
   const FILTER_COLORS = { all: "#00f5d4", critical: "#ff2d78", warning: "#f59e0b", normal: "#39ff14" };
 
-  const filtered = filter === "all" ? patients : patients.filter((p) => p.risk_level === filter);
+  // Ensure we always work with valid data
+  const validPatients = Array.isArray(patients) ? patients.filter(p => p && typeof p === 'object' && p.id) : [];
+  const validAlerts = Array.isArray(alerts) ? alerts.filter(a => a && typeof a === 'object') : [];
+  
+  const filtered = filter === "all" ? validPatients : validPatients.filter((p) => p.risk_level === filter);
   const sorted = [...filtered].sort((a, b) => {
     const order = { critical: 0, warning: 1, normal: 2 };
     return (order[a.risk_level] ?? 3) - (order[b.risk_level] ?? 3);
   });
 
-  const criticalCount = patients.filter((p) => p.risk_level === "critical").length;
-  const selectedPatient = patients.find((p) => p.id === selected) || null;
+  const criticalCount = validPatients.filter((p) => p.risk_level === "critical").length;
+  const selectedPatient = validPatients.find((p) => p.id === selected) || null;
 
   return (
     <div className={`min-h-screen grid-bg transition-colors duration-300 ${
@@ -74,31 +99,31 @@ export default function Dashboard() {
 
       <CriticalBanner criticalCount={criticalCount} />
 
-      <div className="max-w-screen-2xl mx-auto px-8 py-8">
+      <div className="max-w-screen-2xl mx-auto px-6 py-6">
         {/* Header with improved spacing */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-end justify-between mb-8"
+          className="flex items-end justify-between mb-6"
         >
           <div>
-            <h1 className={`font-display font-bold text-4xl ${isDark ? 'text-white' : 'text-gray-900'} tracking-tight mb-2`}>
+            <h1 className={`font-display font-bold text-3xl ${isDark ? 'text-white' : 'text-gray-900'} tracking-tight mb-1`}>
               ICU Command
               <span className={`ml-3 font-mono text-sm font-normal ${isDark ? 'opacity-30' : 'opacity-40'} tracking-widest`}>CENTER</span>
             </h1>
-            <p className={`font-mono text-xs ${isDark ? 'opacity-40' : 'opacity-60'} tracking-wide`}>{patients.length} patients monitored · Sepsis prediction active</p>
+            <p className={`font-mono text-xs ${isDark ? 'opacity-40' : 'opacity-60'} tracking-wide`}>{validPatients.length} patients monitored · Sepsis prediction active</p>
           </div>
 
           <div className="flex gap-2">
             {FILTERS.map((f) => {
-              const count = f === "all" ? patients.length : patients.filter((p) => p.risk_level === f).length;
+              const count = f === "all" ? validPatients.length : validPatients.filter((p) => p.risk_level === f).length;
               return (
                 <motion.button
                   key={f}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setFilter(f)}
-                  className="px-4 py-2 rounded-lg font-mono text-xs tracking-widest uppercase transition-all hover:shadow-lg"
+                  className="px-3 py-2 rounded-lg font-mono text-xs tracking-widest uppercase transition-all hover:shadow-lg"
                   style={{
                     background: filter === f ? `${FILTER_COLORS[f]}15` : isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)",
                     border: `1px solid ${filter === f ? FILTER_COLORS[f] + "44" : isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)"}`,
@@ -112,48 +137,59 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        <StatsBar patients={patients} alerts={alerts} />
+        <StatsBar patients={validPatients} alerts={validAlerts} />
 
-        <div className="grid grid-cols-12 gap-6">
+        <div className="grid grid-cols-12 gap-5">
           {/* Patient grid */}
           <div className="col-span-9">
             {sorted.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center h-72 rounded-2xl"
+                className="flex flex-col items-center justify-center h-64 rounded-2xl"
                 style={{ 
                   border: isDark ? "1px dashed rgba(255,255,255,0.08)" : "1px dashed rgba(0,0,0,0.12)", 
                   background: isDark ? "rgba(13,18,32,0.5)" : "rgba(255,255,255,0.5)"
                 }}
               >
-                <div className={`text-5xl mb-4 ${isDark ? 'opacity-20' : 'opacity-15'}`}>⬡</div>
+                <div className={`text-4xl mb-3 ${isDark ? 'opacity-20' : 'opacity-15'}`}>⬡</div>
                 <p className={`font-mono text-xs tracking-widest ${isDark ? 'opacity-30' : 'opacity-40'} uppercase mb-1`}>No patients found</p>
                 <p className={`font-mono text-xs ${isDark ? 'opacity-15' : 'opacity-30'}`}>Use scenario controls or seed patients via API</p>
               </motion.div>
             ) : (
-              <div className="grid grid-cols-3 gap-5">
-                {sorted.map((p, i) => (
-                  <PatientCard
-                    key={p.id}
-                    patient={p}
-                    index={i}
-                    onClick={() => setSelected(p.id === selected ? null : p.id)}
-                  />
-                ))}
+              <div className="grid grid-cols-3 gap-4">
+                {sorted.map((p, i) => {
+                  // Triple-check we have a valid patient
+                  if (!p || typeof p !== 'object' || !p.id) {
+                    console.warn('Invalid patient in sorted array:', p);
+                    return null;
+                  }
+                  
+                  // Create absolutely unique key with multiple fallbacks  
+                  const patientKey = `patient-${String(p.id)}-${p.name?.replace(/\s+/g, '-') || 'unknown'}-${i}`;
+                  
+                  return (
+                    <PatientCard
+                      key={patientKey}
+                      patient={p}
+                      index={i}
+                      onClick={() => setSelected(p.id === selected ? null : p.id)}
+                    />
+                  );
+                }).filter(Boolean)} {/* Remove any null entries */}
               </div>
             )}
           </div>
 
           {/* Right panel */}
-          <div className="col-span-3 flex flex-col gap-5">
+          <div className="col-span-3 flex flex-col gap-4">
             <SeedControl onSeeded={refresh} />
 
             {/* Live alert feed */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl p-5 flex flex-col gap-4 flex-1" 
+              className="rounded-2xl p-4 flex flex-col gap-3 flex-1" 
               style={{ 
                 background: isDark ? "#0d1220" : "#ffffff",
                 border: isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,0,0,0.08)"
@@ -161,39 +197,50 @@ export default function Dashboard() {
             >
               <div className={`flex items-center justify-between pb-2 border-b ${isDark ? 'border-white border-opacity-5' : 'border-gray-300 border-opacity-30'}`}>
                 <span className={`font-display font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'} tracking-wide`}>LIVE ALERTS</span>
-                <span className="font-mono text-xs px-3 py-1 rounded-full" style={{ background: "rgba(255,45,120,0.12)", color: "#ff2d78", border: "1px solid rgba(255,45,120,0.25)" }}>
-                  {alerts.filter(a => !a.resolved).length} active
+                <span className="font-mono text-xs px-2.5 py-1 rounded-full" style={{ background: "rgba(255,45,120,0.12)", color: "#ff2d78", border: "1px solid rgba(255,45,120,0.25)" }}>
+                  {validAlerts.filter(a => a && !a.resolved).length} active
                 </span>
               </div>
 
-              <div className="flex flex-col gap-3 overflow-y-auto flex-1 pr-2">
-                {alerts.filter(a => !a.resolved).length === 0 ? (
-                  <div className={`text-center py-8 font-mono text-xs ${isDark ? 'opacity-25' : 'opacity-40'}`}>✓ ALL CLEAR</div>
+              <div className="flex flex-col gap-2.5 overflow-y-auto flex-1 pr-2">
+                {validAlerts.filter(a => a && !a.resolved).length === 0 ? (
+                  <div className={`text-center py-6 font-mono text-xs ${isDark ? 'opacity-25' : 'opacity-40'}`}>✓ ALL CLEAR</div>
                 ) : (
-                  alerts.filter(a => !a.resolved).slice(0, 8).map((a, i) => {
+                  validAlerts.filter(a => a && !a.resolved).slice(0, 8).map((a, i) => {
+                    // Skip invalid alert objects
+                    if (!a || typeof a !== 'object') {
+                      console.warn('Invalid alert:', a);
+                      return null;
+                    }
+                    
                     const color = a.level === "critical" ? "#ff2d78" : "#f59e0b";
+                    // Create unique alert key with timestamp and content - avoid object references
+                    const alertKey = `alert-${i}-${a.level || 'unknown'}-${a.triggered_at || Date.now()}-${String(a.message || 'msg').substring(0, 10)}`;
+                    
                     return (
                       <motion.div
-                        key={a.id || i}
+                        key={alertKey}
                         initial={{ opacity: 0, x: 10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.04 }}
-                        className="rounded-lg px-4 py-3 hover:bg-opacity-20 transition-all"
+                        className="rounded-lg px-3 py-2.5 hover:bg-opacity-20 transition-all"
                         style={{ background: `${color}0f`, border: `1px solid ${color}25` }}
                       >
-                        <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="flex items-center gap-2 mb-1">
                           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
                           <span className="font-mono text-xs font-bold tracking-widest" style={{ color }}>
-                            {a.level?.toUpperCase()}
+                            {String(a.level || 'UNKNOWN').toUpperCase()}
                           </span>
                           <span className={`font-mono text-xs opacity-40 ml-auto ${isDark ? 'text-white' : 'text-gray-600'}`}>
-                            {new Date(a.triggered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            {a.triggered_at ? new Date(a.triggered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : '--:--'}
                           </span>
                         </div>
-                        <p className={`font-mono text-xs opacity-50 leading-relaxed pl-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{a.message}</p>
+                        <p className={`font-mono text-xs opacity-50 leading-relaxed pl-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                          {String(a.message || 'No message')}
+                        </p>
                       </motion.div>
                     );
-                  })
+                  }).filter(Boolean) // Remove any null entries
                 )}
               </div>
             </motion.div>

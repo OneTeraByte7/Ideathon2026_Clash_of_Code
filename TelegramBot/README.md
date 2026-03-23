@@ -1,82 +1,116 @@
 # 🤖 Telegram Bot Setup for Asclepius AI
 
+## NEW WORKFLOW IMPLEMENTATION
+
+### Critical Alert Workflow:
+1. **Website → Critical Alert Button** → Sends alert to both Doctor and Nurse
+2. **Doctor receives** message with buttons: ✅ Approve, ❌ Reject, ✏️ Add Note
+3. **If Approved** → Nurse receives AI recommendation to implement immediately
+4. **If Rejected** → Nurse notified to wait, Doctor must add note with `/note PAT001 alternative instructions`
+5. **If Note Added** → Doctor's alternative instructions sent to nurse
+
+### Warning Alert Workflow:
+1. **Website → Warning Button** → Sends alert to Nurse only (no approval needed)
+
 ## Installation
 
 1. **Install Python dependencies**:
 ```bash
 cd TelegramBot
-pip install python-telegram-bot httpx
+pip install -r requirements.txt
 ```
 
-2. **Run the bot**:
+2. **Setup Environment Variables in server/.env**:
 ```bash
-python asclepius_bot.py
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_DOCTOR_CHAT_ID=doctor_chat_id_here  
+TELEGRAM_NURSE_CHAT_ID=nurse_chat_id_here
+```
+
+3. **Run the bot**:
+```bash
+python telegram_bot.py
 ```
 
 ## Features
 
 ### For Doctors 👨‍⚕️
-- **Inline Buttons** on critical protocol alerts:
-  - ✅ **Approve Protocol** - Approve and activate treatment
-  - ❌ **Reject Protocol** - Reject with feedback option
-  - ✏️ **Modify Protocol** - Request changes
-  - 📋 **View Details** - Link to full protocol details
+- **Critical Alert Buttons**:
+  - ✅ **Approve** - Send AI protocol to nurse immediately
+  - ❌ **Reject** - Reject protocol, nurse waits for alternative
+  - ✏️ **Add Note** - Modify protocol with custom instructions
 
-### Commands
-- `/start` - Bot introduction and help
-- `/help` - Show available commands  
-- `/note <protocol_id> <your_note>` - Add doctor notes to protocols
+### For Nurses 👩‍⚕️
+- **Receive Critical Alerts** with status updates
+- **Receive Warning Alerts** for monitoring
+- **Get AI Recommendations** when doctor approves
+- **Receive Alternative Instructions** when doctor rejects/modifies
 
-### Example Usage
+## Commands
+- `/note <patient_id> <message>` - Doctor adds notes/instructions after rejection or modification
+- `/warning` - Test warning alert (for testing)
+
+## Example Workflow
+
+### Critical Alert Example:
 ```
-Doctor receives alert:
-📋 MEDICAL PROTOCOL GENERATED
-Patient: Ramesh Kulkarni (ICU-01)
-Risk Score: 87.5
-[Buttons: Approve | Reject | Modify | Details]
+🔴 CRITICAL ALERT - Doctor Action Required
+Patient: John Doe (Bed 3)
+Risk Score: 87.5/100
+📋 AI-Generated Protocol Ready
 
-Doctor clicks "Approve" → Protocol is approved in system
-Doctor clicks "Modify" → Bot asks for /note command
-Doctor sends: /note 123 Increase antibiotic dose
+[✅ Approve] [❌ Reject] [✏️ Add Note]
+```
+
+**If Doctor clicks "Approve":**
+```
+Nurse receives:
+✅ AI PROTOCOL APPROVED
+Patient ID: PAT001
+🤖 AI RECOMMENDATION:
+• Immediate blood cultures
+• Start empirical antibiotics (Vancomycin + Piperacillin-Tazobactam)
+• Fluid resuscitation 30ml/kg crystalloid
+• Monitor lactate q1h
+```
+
+**If Doctor clicks "Reject":**
+```
+Nurse receives:
+❌ PROTOCOL REJECTED  
+Patient ID: PAT001
+⏳ Please wait for doctor's alternative instructions
+
+Doctor then types: /note PAT001 Start vancomycin only, hold fluids
+
+Nurse receives:
+📝 DOCTOR'S ALTERNATIVE INSTRUCTIONS
+Patient ID: PAT001
+👨‍⚕️ Instructions: Start vancomycin only, hold fluids
+```
+
+### Warning Alert Example:
+```
+⚠️ WARNING ALERT - Elevated Sepsis Risk
+Patient: Jane Smith (Bed 5)  
+Risk Score: 45.2/100
+⚠️ INCREASED MONITORING REQUIRED
+Please review patient status and vitals closely.
 ```
 
 ## Configuration
 
-Edit `asclepius_bot.py` to update:
-- `BOT_TOKEN` - Your bot token from @BotFather
-- `DOCTOR_CHAT_ID` - Doctor group chat ID  
-- `API_BASE_URL` - Your deployed API URL
-
-## Running in Production
-
-### Option 1: Local Server
-```bash
-# Keep bot running in background
-nohup python asclepius_bot.py > bot.log 2>&1 &
-```
-
-### Option 2: Deploy to Heroku/Railway
-1. Create `requirements.txt`:
-```
-python-telegram-bot>=20.0
-httpx>=0.25.0
-```
-
-2. Create `Procfile`:
-```
-worker: python asclepius_bot.py
-```
-
-3. Deploy as a worker process (not web service)
-
-### Option 3: Run on Same Server as API
-Add to your main server startup script or run as separate process.
+1. **Get Bot Token** from @BotFather on Telegram
+2. **Get Chat IDs** - Add bot to doctor/nurse chats and use @userinfobot
+3. **Update server/.env** with the credentials
+4. **Start the bot** and test with buttons
 
 ## Testing
 
-1. Add the bot to your doctor group
-2. Send a test protocol alert from the dashboard  
-3. Click buttons to test responses
-4. Check logs for successful API calls
+1. Add bot to doctor and nurse chats
+2. Trigger critical alert from website  
+3. Doctor clicks buttons to test workflow
+4. Check nurse receives appropriate messages
+5. Test `/note` command for rejections
 
-🏥 **The bot will now handle all doctor protocol responses!**
+🏥 **Complete doctor-nurse workflow now implemented!**

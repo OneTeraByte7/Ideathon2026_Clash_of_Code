@@ -98,7 +98,7 @@ export const MOCK_PROTOCOLS = [
     risk_score: 87.5,
     status: "pending",
     immediate_actions: "1. Obtain 2 sets of blood cultures before antibiotics\n2. Measure serum lactate (target <2 mmol/L)\n3. Administer 30 mL/kg IV crystalloid bolus (Normal Saline)\n4. Apply supplemental O2 — target SpO2 ≥94%\n5. Insert urinary catheter — monitor hourly output",
-    antibiotic_suggestion: "PENICILLIN ALLERGY NOTED — Piperacillin-Tazobactam EXCLUDED\n\nRecommend: Meropenem 1g IV q8h (renal function unknown — reassess CrCl)\n+ Vancomycin 25 mg/kg IV loading dose (trough-guided)\n\nRationale: Post-surgical abdominal source, gram-negative + MRSA coverage needed",
+    antibiotic_suggestion: "PENICILLIN ALLERGY NOTED — Piperacillin-Tazobactam EXCLUDED\n\nRecommend: Meropenem 1g IV q8h (renal function Unknown — reassess CrCl)\n+ Vancomycin 25 mg/kg IV loading dose (trough-guided)\n\nRationale: Post-surgical abdominal source, gram-negative + MRSA coverage needed",
     rationale: "Post-abdominal surgery patient with compensated septic shock (SBP 86, lactate 4.3). Penicillin allergy requires carbapenem-based regimen. Immunocompetent but surgical site infection risk is high. Urgent source control evaluation within 6 hours.",
     generated_at: new Date(Date.now() - 5 * 60000).toISOString(),
   },

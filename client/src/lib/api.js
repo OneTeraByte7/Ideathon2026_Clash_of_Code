@@ -31,6 +31,9 @@ export const resolveAlert = (id) =>
 export const triggerCriticalAlert = (patientId) =>
   API.post(`/patients/${patientId}/trigger-critical`).then(r => r.data);
 
+export const triggerWarningAlert = (patientId) =>
+  API.post(`/patients/${patientId}/trigger-warning`).then(r => r.data);
+
 export const createWS = () => {
   const wsUrl = BASE.replace(/^http/, "ws") + "/ws/icu";
   console.log("Connecting to WebSocket:", wsUrl);

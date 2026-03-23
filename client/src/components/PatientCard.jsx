@@ -3,7 +3,7 @@ import { useState } from "react";
 import RiskGauge from "./RiskGauge";
 import VitalTile from "./VitalTile";
 import ECGLine from "./ECGLine";
-import { triggerCriticalAlert } from "../lib/api";
+import { triggerCriticalAlert, triggerWarningAlert } from "../lib/api";
 
 const LEVEL_STYLES = {
   normal:   { accent: "#00f5d4", label: "STABLE",   bg: "rgba(0,245,212,0.03)" },
@@ -13,7 +13,8 @@ const LEVEL_STYLES = {
 
 export default function PatientCard({ patient, onClick, index = 0 }) {
   const [hovered, setHovered] = useState(false);
-  const [alertSending, setAlertSending] = useState(false);
+  const [criticalSending, setCriticalSending] = useState(false);
+  const [warningSending, setWarningSending] = useState(false);
   const level = patient.risk_level || "normal";
   const s = LEVEL_STYLES[level];
   const vitals = patient.vitals || {};
@@ -22,7 +23,7 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
 
   const handleCriticalAlert = async (e) => {
     e.stopPropagation(); // Prevent card click
-    setAlertSending(true);
+    setCriticalSending(true);
     
     try {
       const result = await triggerCriticalAlert(patient.id);
@@ -30,7 +31,21 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
     } catch (error) {
       alert("❌ Failed to send critical alert");
     } finally {
-      setAlertSending(false);
+      setCriticalSending(false);
+    }
+  };
+
+  const handleWarningAlert = async (e) => {
+    e.stopPropagation(); // Prevent card click
+    setWarningSending(true);
+    
+    try {
+      const result = await triggerWarningAlert(patient.id);
+      alert(`✅ ${result.message}`);
+    } catch (error) {
+      alert("❌ Failed to send warning alert");
+    } finally {
+      setWarningSending(false);
     }
   };
 
@@ -69,13 +84,13 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
         )}
       </AnimatePresence>
 
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-5">
+      <div className="p-5">
+        {/* Header - reduced padding */}
+        <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span
-                className="font-mono text-xs tracking-widest px-3 py-1 rounded-lg font-semibold"
+                className="font-mono text-xs tracking-widest px-2.5 py-0.5 rounded-lg font-semibold"
                 style={{ color: s.accent, background: `${s.accent}18`, border: `1px solid ${s.accent}33` }}
               >
                 BED {patient.bed_number}
@@ -91,74 +106,105 @@ export default function PatientCard({ patient, onClick, index = 0 }) {
             <p className="text-xs opacity-50 font-mono truncate max-w-[160px]">{patient.diagnosis}</p>
           </div>
 
-          <RiskGauge score={patient.current_risk_score || 0} size={92} />
+          <RiskGauge score={patient.current_risk_score || 0} size={88} />
         </div>
 
-        {/* ECG strip */}
-        <div className="mb-5 opacity-70">
+        {/* ECG strip - reduced margin */}
+        <div className="mb-4 opacity-70">
           <ECGLine
             color={s.accent}
-            height={40}
+            height={36}
           />
         </div>
 
-        {/* Vitals grid */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        {/* Vitals grid - reduced gap */}
+        <div className="grid grid-cols-3 gap-2.5 mb-4">
           {["heart_rate", "systolic_bp", "respiratory_rate", "temperature", "spo2", "lactate"].map((key, i) => (
             <VitalTile key={key} metricKey={key} value={vitals[key]} index={i} />
           ))}
         </div>
 
-        {/* Alert badges */}
+        {/* Alert badges - more compact */}
         {patient.active_alerts?.length > 0 && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="pt-3 border-t border-white/5 mb-3"
+            className="pt-2.5 border-t border-white/5 mb-3"
           >
-            {patient.active_alerts.slice(0, 1).map((a, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <span className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style={{ background: s.accent }} />
-                <p className="text-xs opacity-60 font-mono truncate">{a.message}</p>
-              </div>
-            ))}
+            {patient.active_alerts.slice(0, 1).map((a, i) => {
+              const alertKey = `alert-${patient.id}-${i}-${a.message?.substring(0, 10) || 'unknown'}`;
+              return (
+                <div key={alertKey} className="flex items-start gap-2">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style={{ background: s.accent }} />
+                  <p className="text-xs opacity-60 font-mono truncate">{a.message}</p>
+                </div>
+              );
+            })}
           </motion.div>
         )}
 
-        {/* Critical Alert Button */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleCriticalAlert}
-          disabled={alertSending}
-          className="w-full py-2 px-3 rounded-lg font-mono text-xs font-bold tracking-widest transition-all flex items-center justify-center gap-2"
-          style={{
-            background: isCritical ? "#ff2d7820" : "#ff2d7810",
-            border: "1px solid #ff2d7830",
-            color: "#ff2d78",
-          }}
-        >
-          {alertSending ? (
-            <>
-              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-              SENDING...
-            </>
-          ) : (
-            <>
-              🚨 TRIGGER CRITICAL ALERT
-            </>
-          )}
-        </motion.button>
+        {/* Alert Buttons - improved spacing and layout */}
+        <div className="space-y-2">
+          {/* Critical Alert Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleCriticalAlert}
+            disabled={criticalSending}
+            className="w-full py-2 px-3 rounded-lg font-mono text-xs font-bold tracking-widest transition-all flex items-center justify-center gap-2"
+            style={{
+              background: isCritical ? "#ff2d7825" : "#ff2d7812",
+              border: "1px solid #ff2d7835",
+              color: "#ff2d78",
+            }}
+          >
+            {criticalSending ? (
+              <>
+                <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                SENDING...
+              </>
+            ) : (
+              <>
+                🚨 CRITICAL ALERT
+              </>
+            )}
+          </motion.button>
+
+          {/* Warning Alert Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleWarningAlert}
+            disabled={warningSending}
+            className="w-full py-2 px-3 rounded-lg font-mono text-xs font-bold tracking-widest transition-all flex items-center justify-center gap-2"
+            style={{
+              background: isWarning ? "#f59e0b25" : "#f59e0b12",
+              border: "1px solid #f59e0b35",
+              color: "#f59e0b",
+            }}
+          >
+            {warningSending ? (
+              <>
+                <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                SENDING...
+              </>
+            ) : (
+              <>
+                ⚠️ WARNING ALERT
+              </>
+            )}
+          </motion.button>
+        </div>
       </div>
 
       {/* Hover expand hint */}
       <AnimatePresence>
-        {hovered && !alertSending && (
+        {hovered && !criticalSending && !warningSending && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute bottom-4 right-5 font-mono text-xs tracking-widest opacity-50 font-semibold"
+            className="absolute bottom-4 right-4 font-mono text-xs tracking-widest opacity-50 font-semibold"
             style={{ color: s.accent }}
           >
             VIEW DETAILS →

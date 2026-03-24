@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Asclepius AI - Production Telegram Bot
+Asclepius AI - Production Telegram Bot (Fixed Imports)
 Handles critical medical protocol approvals and notifications
 """
 import logging
 import asyncio
 import httpx
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -13,11 +14,11 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, ContextTypes
 import sys
 
-# Add server directory to path for imports
-server_path = Path(__file__).parent.parent / "server"
-sys.path.insert(0, str(server_path))
+# Load configuration from environment variables instead of config import
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+NURSE_CHAT_ID = os.getenv('TELEGRAM_NURSE_CHAT_ID')
+DOCTOR_CHAT_ID = os.getenv('TELEGRAM_DOCTOR_CHAT_ID')
 
-from config import get_settings
 
 # Configure logging
 logging.basicConfig(
@@ -25,12 +26,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
-# Load configuration
-settings = get_settings()
-BOT_TOKEN = settings.telegram_bot_token
-NURSE_CHAT_ID = settings.telegram_nurse_chat_id
-DOCTOR_CHAT_ID = settings.telegram_doctor_chat_id
 
 # Storage for pending protocols and notes (in production use Redis/Database)
 pending_protocols: Dict[str, Dict[str, Any]] = {}

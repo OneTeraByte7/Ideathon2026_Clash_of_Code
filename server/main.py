@@ -22,7 +22,7 @@ from api.websocket import router as ws_router
 from api.analytics import router as analytics_router
 from db.mongodb import init_db, close_db
 from services.telegram_service import TelegramService
-from services.telegram_bot_runner import telegram_bot_runner
+from services.telegram_bot_runner_direct import telegram_bot_runner
 from config import get_settings
 
 settings = get_settings()
@@ -69,14 +69,14 @@ async def lifespan(app: FastAPI):
                 logger.info("🔗 Bot will handle approval buttons and /note commands")
             else:
                 logger.error("❌ Telegram bot failed to start - check token and configuration")
-                logger.error("💡 System will run in demo mode")
+                logger.error("💡 System will continue without Telegram notifications")
         else:
             logger.warning("🤖 Telegram bot not configured - missing token or chat IDs")
             logger.warning("💡 Add TELEGRAM_BOT_TOKEN, TELEGRAM_NURSE_CHAT_ID, TELEGRAM_DOCTOR_CHAT_ID to .env")
         
     except Exception as e:
         logger.error(f"❌ Startup error: {e}")
-        # Continue anyway for demo mode
+        # Continue anyway - system can function without some components
     
     yield
     

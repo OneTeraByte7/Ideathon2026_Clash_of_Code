@@ -72,9 +72,9 @@ class TelegramService:
             "disable_web_page_preview": True
         }
         
-        # Send with buttons only to doctors
+        # Add reply markup (buttons) if provided
         if reply_markup:
-            data["reply_markup"] = json.dumps(reply_markup) if isinstance(reply_markup, dict) else reply_markup
+            data["reply_markup"] = reply_markup
         
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:

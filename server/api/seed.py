@@ -1,6 +1,6 @@
 """
-Seed API — Asclepius AI
-Three endpoints for demo control:
+Patient Monitoring Control API — Asclepius AI
+Three endpoints for patient vital monitoring:
   POST /seed/normal   → 🔵 Blue  — healthy vitals for all patients
   POST /seed/warning  → 🟡 Yellow — borderline sepsis vitals
   POST /seed/critical → 🔴 Red   — critical sepsis vitals
@@ -9,7 +9,7 @@ Each endpoint:
   1. Reads from data/seeds/{level}.csv  OR  uses inline defaults
   2. Ingests vitals for all active patients
   3. Triggers the full pipeline (risk score → alert → protocol → notifications)
-  4. Sends Telegram notifications to medical staff
+  4. Sends real-time notifications to medical staff via Telegram
 """
 import csv
 import io
@@ -21,7 +21,7 @@ from models.patient import Patient
 from services.vitals_service import ingest_vital
 from services.telegram_service import telegram_service
 
-router = APIRouter(prefix="/seed", tags=["Seed (Demo Control)"])
+router = APIRouter(prefix="/seed", tags=["Patient Monitoring Control"])
 
 SEEDS_DIR = Path(__file__).parent.parent.parent / "data" / "seeds"
 
@@ -108,7 +108,7 @@ async def _seed_all_patients(level: str, vitals_list: list[dict]) -> list[dict]:
 
 
 async def _send_telegram_notifications(level: str, outcomes: list[dict]) -> dict:
-    """Send appropriate Telegram notifications based on seed level"""
+    """Send appropriate Telegram notifications based on monitoring level"""
     if level == "normal":
         return {"telegram": "No notifications sent for normal vitals"}
     
@@ -117,20 +117,19 @@ async def _send_telegram_notifications(level: str, outcomes: list[dict]) -> dict
     try:
         if level == "warning":
             # Send to nurses only for warning
-            message = f"""⚠️ <b>WARNING ALERT - SEED DATA</b>
+            message = f"""⚠️ <b>WARNING ALERT - Elevated Sepsis Risk</b>
             
 <b>Alert Level:</b> WARNING 
 <b>Patients Affected:</b> {len(outcomes)}
 <b>Action:</b> Increased monitoring required
 
-<b>Sample Patient Data:</b>
+<b>Patient Data:</b>
 {outcomes[0]['patient_name']} ({outcomes[0]['bed']})
-Risk Score: {outcomes[0]['risk_score']:.1f}
+Risk Score: {outcomes[0]['risk_score']:.1f}/100
 
 <b>⚠️ REVIEW ALL PATIENTS</b>
 Check dashboard for complete status update.
 
-<i>This is a demonstration alert from seed data</i>
 🏥 Asclepius AI - ICU Sepsis Early Warning System"""
             
             telegram_results = await telegram_service.send_to_medical_team(message, level="warning")
@@ -139,25 +138,21 @@ Check dashboard for complete status update.
             # Send to both nurses and doctors for critical
             critical_patients = [p for p in outcomes if p['risk_score'] > 70]
             
-            message = f"""🚨 <b>CRITICAL ALERT - SEED DATA</b>
-            
-<b>Alert Level:</b> CRITICAL
-<b>Patients in Critical State:</b> {len(critical_patients)}
-<b>Total Patients Updated:</b> {len(outcomes)}
-
-<b>Highest Risk Patient:</b>
-{max(outcomes, key=lambda x: x['risk_score'])['patient_name']} ({max(outcomes, key=lambda x: x['risk_score'])['bed']})
-Risk Score: {max(outcomes, key=lambda x: x['risk_score'])['risk_score']:.1f}
-
-<b>🚨 IMMEDIATE ACTION REQUIRED</b>
-• Review all patient protocols
-• Check vital signs immediately  
-• Prepare for potential interventions
-
-<i>This is a demonstration alert from seed data</i>
-🏥 Asclepius AI - ICU Sepsis Early Warning System"""
-            
-            telegram_results = await telegram_service.send_to_medical_team(message, level="critical", include_buttons=True)
+            # For critical, use the proper critical alert with buttons
+            for patient_data in critical_patients:
+                # Build patient object for telegram service
+                patient = {
+                    'name': patient_data['patient_name'],
+                    'bed_number': patient_data['bed'],
+                    'current_risk_score': patient_data['risk_score'],
+                    'diagnosis': 'Critical Sepsis Risk',
+                    'risk_factors': 'Multiple critical indicators detected',
+                    'vitals': patient_data['vitals']
+                }
+                
+                # Send critical alert with buttons
+                result = await telegram_service.send_critical_alert(patient)
+                telegram_results[f"patient_{patient_data['patient_id']}"] = result
         
         return {"telegram": telegram_results}
     
@@ -165,11 +160,11 @@ Risk Score: {max(outcomes, key=lambda x: x['risk_score'])['risk_score']:.1f}
         return {"telegram": {"error": str(e)}}
 
 
-@router.post("/normal", summary="🔵 Seed Normal Vitals")
+@router.post("/normal", summary="🔵 Set Normal Vitals")
 async def seed_normal(
     csv_file: UploadFile | None = File(default=None),
 ):
-    """Inject healthy vitals — no alerts triggered."""
+    """Set healthy vitals — no alerts triggered."""
     vitals_list = await _load_csv_vitals("normal", csv_file)
     outcomes = await _seed_all_patients("normal", vitals_list)
     
@@ -177,7 +172,7 @@ async def seed_normal(
     telegram_status = {"telegram": "No notifications sent for normal vitals"}
     
     return {
-        "seeded": "normal",
+        "alert_level": "normal", 
         "description": "🔵 All patients showing healthy vitals. No alerts triggered.",
         "patients_updated": len(outcomes),
         "results": outcomes,
@@ -185,7 +180,7 @@ async def seed_normal(
     }
 
 
-@router.post("/warning", summary="🟡 Seed Warning Vitals")
+@router.post("/warning", summary="🟡 Trigger Warning Alert")
 async def seed_warning(
     csv_file: UploadFile | None = File(default=None),
 ):
@@ -197,19 +192,19 @@ async def seed_warning(
     telegram_status = await _send_telegram_notifications("warning", outcomes)
     
     return {
-        "seeded": "warning",
-        "description": "🟡 Borderline sepsis signals. Nurse notified via Telegram.",
+        "alert_level": "warning",
+        "description": "🟡 Borderline sepsis signals detected. Medical team notified via Telegram.",
         "patients_updated": len(outcomes),
         "results": outcomes,
         "notifications": telegram_status,
     }
 
 
-@router.post("/critical", summary="🔴 Seed Critical Vitals")
+@router.post("/critical", summary="🔴 Trigger Critical Alert")
 async def seed_critical(
     csv_file: UploadFile | None = File(default=None),
 ):
-    """Inject critical vitals — nurse + doctor notified, Gemini protocol generated."""
+    """Inject critical vitals — full medical team alert with protocol generation."""
     vitals_list = await _load_csv_vitals("critical", csv_file)
     outcomes = await _seed_all_patients("critical", vitals_list)
     
@@ -217,8 +212,8 @@ async def seed_critical(
     telegram_status = await _send_telegram_notifications("critical", outcomes)
     
     return {
-        "seeded": "critical",
-        "description": "🔴 Critical sepsis signals. Nurse + Doctor notified via Telegram. Gemini protocol generated.",
+        "alert_level": "critical",
+        "description": "🔴 Critical sepsis signals detected. Full medical team alert with AI protocol generation.",
         "patients_updated": len(outcomes),
         "results": outcomes,
         "notifications": telegram_status,

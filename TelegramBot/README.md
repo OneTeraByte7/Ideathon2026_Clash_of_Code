@@ -1,116 +1,188 @@
-# 🤖 Telegram Bot Setup for Asclepius AI
+# Asclepius AI - Telegram Bot (Production)
 
-## NEW WORKFLOW IMPLEMENTATION
+## 🏥 Medical Alert Telegram Bot System
 
-### Critical Alert Workflow:
-1. **Website → Critical Alert Button** → Sends alert to both Doctor and Nurse
-2. **Doctor receives** message with buttons: ✅ Approve, ❌ Reject, ✏️ Add Note
-3. **If Approved** → Nurse receives AI recommendation to implement immediately
-4. **If Rejected** → Nurse notified to wait, Doctor must add note with `/note PAT001 alternative instructions`
-5. **If Note Added** → Doctor's alternative instructions sent to nurse
+Production-ready Telegram bot for the Asclepius AI ICU Sepsis Early Warning System. Handles critical medical protocol approvals and real-time notifications for healthcare staff.
 
-### Warning Alert Workflow:
-1. **Website → Warning Button** → Sends alert to Nurse only (no approval needed)
+## 🚀 Features
 
-## Installation
+- **Critical Sepsis Alerts**: Real-time notifications with doctor approval workflow
+- **Protocol Management**: Approve, reject, or modify AI-generated medical protocols
+- **Medical Team Communication**: Secure communication between doctors and nurses
+- **Production-Grade**: No demo mode - built for actual medical use
+- **Error Handling**: Robust error handling and logging
 
-1. **Install Python dependencies**:
+## 🔧 Setup & Configuration
+
+### 1. Environment Variables
+
+Create a `.env` file in the server directory with:
+
+```bash
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN=your_bot_token_from_botfather
+TELEGRAM_NURSE_CHAT_ID=-your_nurse_chat_id
+TELEGRAM_DOCTOR_CHAT_ID=-your_doctor_chat_id
+```
+
+### 2. Bot Setup
+
+1. Create a bot with [@BotFather](https://t.me/BotFather)
+2. Get the bot token and add to `.env`
+3. Add the bot to your doctor and nurse groups
+4. Get chat IDs using [@userinfobot](https://t.me/userinfobot)
+
+### 3. Installation
+
 ```bash
 cd TelegramBot
 pip install -r requirements.txt
 ```
 
-2. **Setup Environment Variables in server/.env**:
-```bash
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-TELEGRAM_DOCTOR_CHAT_ID=doctor_chat_id_here  
-TELEGRAM_NURSE_CHAT_ID=nurse_chat_id_here
-```
+## 🏃‍♂️ Running the Bot
 
-3. **Run the bot**:
+### Standalone Mode
 ```bash
 python telegram_bot.py
 ```
 
-## Features
-
-### For Doctors 👨‍⚕️
-- **Critical Alert Buttons**:
-  - ✅ **Approve** - Send AI protocol to nurse immediately
-  - ❌ **Reject** - Reject protocol, nurse waits for alternative
-  - ✏️ **Add Note** - Modify protocol with custom instructions
-
-### For Nurses 👩‍⚕️
-- **Receive Critical Alerts** with status updates
-- **Receive Warning Alerts** for monitoring
-- **Get AI Recommendations** when doctor approves
-- **Receive Alternative Instructions** when doctor rejects/modifies
-
-## Commands
-- `/note <patient_id> <message>` - Doctor adds notes/instructions after rejection or modification
-- `/warning` - Test warning alert (for testing)
-
-## Example Workflow
-
-### Critical Alert Example:
-```
-🔴 CRITICAL ALERT - Doctor Action Required
-Patient: John Doe (Bed 3)
-Risk Score: 87.5/100
-📋 AI-Generated Protocol Ready
-
-[✅ Approve] [❌ Reject] [✏️ Add Note]
+### Integrated with Server
+The bot runs automatically when you start the main server:
+```bash
+cd ../server
+python main.py
 ```
 
-**If Doctor clicks "Approve":**
-```
-Nurse receives:
-✅ AI PROTOCOL APPROVED
-Patient ID: PAT001
-🤖 AI RECOMMENDATION:
-• Immediate blood cultures
-• Start empirical antibiotics (Vancomycin + Piperacillin-Tazobactam)
-• Fluid resuscitation 30ml/kg crystalloid
-• Monitor lactate q1h
-```
+## 📱 Bot Commands
 
-**If Doctor clicks "Reject":**
-```
-Nurse receives:
-❌ PROTOCOL REJECTED  
-Patient ID: PAT001
-⏳ Please wait for doctor's alternative instructions
+### For Doctors
+- `/start` - Show bot information and role
+- `/note PAT001 instructions` - Send treatment instructions
+- `/status` - Check system status
+- `/help` - Show detailed help
 
-Doctor then types: /note PAT001 Start vancomycin only, hold fluids
+### For Nurses  
+- `/start` - Show bot information
+- `/status` - Check system status
 
-Nurse receives:
-📝 DOCTOR'S ALTERNATIVE INSTRUCTIONS
-Patient ID: PAT001
-👨‍⚕️ Instructions: Start vancomycin only, hold fluids
-```
+### Button Actions (Doctors Only)
+- ✅ **Approve**: Execute AI protocol immediately
+- ❌ **Reject**: Provide alternative treatment plan
+- ✏️ **Modify**: Adjust protocol with specific changes
 
-### Warning Alert Example:
+## 🔄 Workflow
+
+### Critical Alert Workflow
+1. System detects critical sepsis risk
+2. Doctor receives alert with approval buttons
+3. Doctor chooses: Approve, Reject, or Modify
+4. Nursing staff receives immediate implementation instructions
+
+### Protocol Management
 ```
-⚠️ WARNING ALERT - Elevated Sepsis Risk
-Patient: Jane Smith (Bed 5)  
-Risk Score: 45.2/100
-⚠️ INCREASED MONITORING REQUIRED
-Please review patient status and vitals closely.
+AI Detection → Doctor Alert → Decision → Nurse Instructions → Implementation
 ```
 
-## Configuration
+## 📝 Usage Examples
 
-1. **Get Bot Token** from @BotFather on Telegram
-2. **Get Chat IDs** - Add bot to doctor/nurse chats and use @userinfobot
-3. **Update server/.env** with the credentials
-4. **Start the bot** and test with buttons
+### Approving Protocol
+Doctor receives alert → Clicks "✅ Approve" → Nurse gets implementation instructions
 
-## Testing
+### Rejecting Protocol
+Doctor receives alert → Clicks "❌ Reject" → Uses `/note PAT001 alternative instructions`
 
-1. Add bot to doctor and nurse chats
-2. Trigger critical alert from website  
-3. Doctor clicks buttons to test workflow
-4. Check nurse receives appropriate messages
-5. Test `/note` command for rejections
+### Modifying Protocol  
+Doctor receives alert → Clicks "✏️ Modify" → Uses `/note PAT001 specific modifications`
 
-🏥 **Complete doctor-nurse workflow now implemented!**
+### General Instructions
+```
+/note PAT001 Start vancomycin 1g q12h, hold piperacillin
+/note PAT002 Increase fluid to 150ml/hr, check lactate q2h
+/note PAT003 Add norepinephrine if MAP < 65, call if no improvement
+```
+
+## 🔐 Security Features
+
+- **Chat ID Validation**: Only authorized chats can interact
+- **Role-Based Access**: Doctors and nurses have different permissions
+- **Secure Messaging**: All communications are encrypted by Telegram
+- **Error Logging**: Comprehensive logging for debugging
+
+## 🏥 Production Considerations
+
+### Medical Grade Features
+- **Time-Critical Alerts**: Immediate notification system
+- **Audit Trail**: All decisions are logged with timestamps
+- **Redundant Messaging**: Multiple confirmation layers
+- **Professional Formatting**: Clear, medical-standard communications
+
+### Reliability
+- **Connection Monitoring**: Auto-reconnection on failures
+- **Error Recovery**: Graceful handling of API issues
+- **Status Monitoring**: Real-time system health checks
+- **Failover**: Falls back to logging if Telegram is unavailable
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Bot not responding:**
+```bash
+# Check token validity
+curl https://api.telegram.org/bot<TOKEN>/getMe
+```
+
+**Chat ID issues:**
+1. Add bot to group
+2. Send `/start` command
+3. Check logs for chat ID
+4. Update .env file
+
+**Permission errors:**
+1. Ensure bot is admin in groups
+2. Check bot can send messages
+3. Verify chat IDs are correct (negative for groups)
+
+### Debug Commands
+```bash
+# Test bot status
+python -c "from telegram_bot import AsclepiusTelegramBot; bot = AsclepiusTelegramBot(); print('Configured:', bot.is_configured())"
+
+# Check configuration
+python -c "from server.config import get_settings; s = get_settings(); print('Token:', bool(s.telegram_bot_token)); print('Nurse:', s.telegram_nurse_chat_id); print('Doctor:', s.telegram_doctor_chat_id)"
+```
+
+## 📊 Monitoring
+
+The bot provides real-time status information:
+- Active connections
+- Message delivery status  
+- Error rates and types
+- Protocol processing metrics
+
+Use `/status` command for health checks.
+
+## 🔄 Updates & Maintenance
+
+### Regular Tasks
+- Monitor error logs
+- Verify chat connectivity
+- Update bot token if needed
+- Review message delivery metrics
+
+### Security Updates
+- Keep python-telegram-bot updated
+- Monitor Telegram API changes
+- Review access permissions regularly
+
+## 📞 Support
+
+For medical emergencies, contact ICU staff directly. For technical issues:
+1. Check logs in server console
+2. Verify network connectivity  
+3. Test bot with `/status` command
+4. Contact system administrator
+
+---
+
+**⚠️ Important**: This is a medical alert system. Ensure proper testing before production use in healthcare environments.

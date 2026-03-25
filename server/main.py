@@ -134,6 +134,10 @@ app.include_router(analytics_router, tags=["📊 Analytics"])
 app.include_router(seed_router, tags=["🌱 Data Seeding"])
 app.include_router(ws_router, tags=["⚡ Real-time"])
 
+# Add throttle configuration router
+from api.throttle import router as throttle_router
+app.include_router(throttle_router, tags=["⏱️ Alert Throttling"])
+
 # Enhanced health endpoints
 @app.get("/", tags=["🏥 System Health"])
 async def system_status():

@@ -5,6 +5,7 @@ import { useICUStream } from "../hooks/useICUStream";
 import PatientCard from "../components/PatientCard";
 import PatientDetail from "../components/PatientDetail";
 import SeedControl from "../components/SeedControl";
+import ThrottleControl from "../components/ThrottleControl";
 import StatsBar from "../components/StatsBar";
 import CriticalBanner from "../components/CriticalBanner";
 
@@ -184,6 +185,7 @@ export default function Dashboard() {
           {/* Right panel */}
           <div className="col-span-3 flex flex-col gap-4">
             <SeedControl onSeeded={refresh} />
+            <ThrottleControl />
 
             {/* Live alert feed */}
             <motion.div 

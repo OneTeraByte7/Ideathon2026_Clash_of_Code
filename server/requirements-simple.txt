@@ -1,0 +1,12 @@
+# Simplified requirements that don't require Rust compilation
+fastapi
+uvicorn
+motor
+pymongo
+pydantic<2.0
+python-dotenv
+httpx
+python-multipart
+websockets
+apscheduler
+python-telegram-bot

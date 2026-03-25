@@ -7,7 +7,7 @@ import asyncio
 import logging
 import json
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -22,10 +22,16 @@ class TelegramService:
         self.doctor_chat_id = settings.telegram_doctor_chat_id
         self.base_url = f"https://api.telegram.org/bot{self.bot_token}" if self.bot_token else ""
         
+        # Alert throttling system - prevents spam alerts
+        self.alert_throttle = {}  # patient_id -> {last_sent: datetime, count: int}
+        self.throttle_interval = timedelta(seconds=15)  # Default 15 second interval
+        self.max_alerts_per_window = 1  # Only 1 alert per window
+        
         # Debug logging to verify configuration
         logger.info(f"🤖 Telegram Bot Token: {'✅ SET' if self.bot_token else '❌ MISSING'}")
         logger.info(f"👩‍⚕️ Nurse Chat ID: {self.nurse_chat_id if self.nurse_chat_id else '❌ MISSING'}")
         logger.info(f"👨‍⚕️ Doctor Chat ID: {self.doctor_chat_id if self.doctor_chat_id else '❌ MISSING'}")
+        logger.info(f"⏱️ Alert Throttle: {self.throttle_interval.seconds}s interval, max {self.max_alerts_per_window} per window")
         
         # Medical staff configuration
         self.medical_staff = {
@@ -40,6 +46,63 @@ class TelegramService:
                 "alerts": ["critical"]
             }
         }
+    
+    def configure_throttling(self, interval_seconds: int = 15, max_alerts: int = 1):
+        """Configure alert throttling parameters"""
+        self.throttle_interval = timedelta(seconds=interval_seconds)
+        self.max_alerts_per_window = max_alerts
+        logger.info(f"⏱️ Alert throttling configured: {interval_seconds}s interval, max {max_alerts} alerts per window")
+    
+    def _is_alert_throttled(self, patient_id: str, alert_level: str = "critical") -> Dict[str, Any]:
+        """Check if alert should be throttled for this patient"""
+        now = datetime.now()
+        patient_key = f"{patient_id}_{alert_level}"
+        
+        if patient_key not in self.alert_throttle:
+            # First alert for this patient - allow it
+            self.alert_throttle[patient_key] = {
+                "last_sent": now,
+                "count": 1,
+                "first_sent": now
+            }
+            return {"throttled": False, "reason": "first_alert"}
+        
+        throttle_data = self.alert_throttle[patient_key]
+        time_since_last = now - throttle_data["last_sent"]
+        
+        if time_since_last < self.throttle_interval:
+            # Within throttle window - increment count but don't send
+            throttle_data["count"] += 1
+            remaining_time = self.throttle_interval - time_since_last
+            
+            logger.warning(f"⏱️ Alert throttled for patient {patient_id}: {remaining_time.seconds}s remaining")
+            return {
+                "throttled": True, 
+                "reason": "within_throttle_window",
+                "remaining_seconds": remaining_time.seconds,
+                "attempts_blocked": throttle_data["count"] - 1
+            }
+        else:
+            # Outside throttle window - reset and allow
+            throttle_data["last_sent"] = now
+            throttle_data["count"] = 1
+            return {"throttled": False, "reason": "throttle_window_expired"}
+    
+    def _clear_old_throttles(self):
+        """Clean up old throttle entries (housekeeping)"""
+        now = datetime.now()
+        cutoff = now - (self.throttle_interval * 10)  # Keep entries for 10x throttle interval
+        
+        keys_to_remove = []
+        for key, data in self.alert_throttle.items():
+            if data["last_sent"] < cutoff:
+                keys_to_remove.append(key)
+        
+        for key in keys_to_remove:
+            del self.alert_throttle[key]
+        
+        if keys_to_remove:
+            logger.info(f"🧹 Cleaned up {len(keys_to_remove)} old throttle entries")
     
     def is_configured(self) -> bool:
         """Check if Telegram is properly configured"""
@@ -181,8 +244,23 @@ class TelegramService:
         return results
     
     async def send_critical_alert(self, patient: Dict[str, Any]) -> Dict[str, Any]:
-        """Send critical patient alert to medical team"""
+        """Send critical patient alert to medical team (with throttling)"""
         patient_id = patient.get('id', 'unknown')
+        
+        # Check if alert should be throttled
+        throttle_check = self._is_alert_throttled(patient_id, "critical")
+        if throttle_check["throttled"]:
+            logger.warning(f"🚫 Critical alert throttled for patient {patient_id}")
+            return {
+                "status": "throttled",
+                "message": f"Alert throttled - {throttle_check['remaining_seconds']}s remaining",
+                "throttle_info": throttle_check,
+                "patient_id": patient_id
+            }
+        
+        # Clean up old throttle entries periodically
+        self._clear_old_throttles()
+        
         protocol_id = f"PROTO_{patient_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         # Message to Nurse (no buttons)
@@ -254,10 +332,31 @@ class TelegramService:
             result = await self.send_message(self.doctor_chat_id, doctor_message, reply_markup=doctor_buttons)
             results["doctor"] = result
         
+        # Add throttling info to results
+        results["throttle_info"] = {
+            "throttle_interval_seconds": self.throttle_interval.seconds,
+            "next_alert_allowed_at": (datetime.now() + self.throttle_interval).isoformat()
+        }
+        
+        logger.info(f"✅ Critical alert sent for patient {patient_id} - next alert allowed in {self.throttle_interval.seconds}s")
+        
         return results
     
     async def send_warning_alert(self, patient: Dict[str, Any]) -> Dict[str, Any]:
-        """Send warning patient alert to nurse only"""
+        """Send warning patient alert to nurse only (with throttling)"""
+        patient_id = patient.get('id', 'unknown')
+        
+        # Check if alert should be throttled
+        throttle_check = self._is_alert_throttled(patient_id, "warning")
+        if throttle_check["throttled"]:
+            logger.warning(f"🚫 Warning alert throttled for patient {patient_id}")
+            return {
+                "status": "throttled",
+                "message": f"Alert throttled - {throttle_check['remaining_seconds']}s remaining",
+                "throttle_info": throttle_check,
+                "patient_id": patient_id
+            }
+        
         message = f"""⚠️ <b>WARNING ALERT - Elevated Sepsis Risk</b>
 
 <b>Patient:</b> {patient.get('name', 'Unknown')} (Bed {patient.get('bed_number', 'N/A')})
@@ -285,6 +384,14 @@ Consider more frequent vital sign checks.
             results["nurse"] = result
         else:
             results["nurse"] = {"status": "error", "message": "No nurse chat ID configured"}
+        
+        # Add throttling info to results
+        results["throttle_info"] = {
+            "throttle_interval_seconds": self.throttle_interval.seconds,
+            "next_alert_allowed_at": (datetime.now() + self.throttle_interval).isoformat()
+        }
+        
+        logger.info(f"✅ Warning alert sent for patient {patient_id} - next alert allowed in {self.throttle_interval.seconds}s")
         
         return results
     

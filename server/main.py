@@ -20,6 +20,7 @@ from api.seed import router as seed_router
 from api.protocol import router as protocol_router
 from api.websocket import router as ws_router
 from api.analytics import router as analytics_router
+from api.health_tip import router as health_tip_router
 from db.mongodb import init_db, close_db
 from services.telegram_service import TelegramService
 from services.telegram_bot_runner_direct import telegram_bot_runner
@@ -127,12 +128,14 @@ app.add_middleware(
 )
 
 # Include all original API routers (they already have prefixes defined)
+
 app.include_router(patients_router, tags=["👥 Patients"])
 app.include_router(alerts_router, tags=["🚨 Alerts"])
 app.include_router(protocol_router, tags=["📋 Medical Protocols"])  
 app.include_router(analytics_router, tags=["📊 Analytics"])
 app.include_router(seed_router, tags=["🌱 Data Seeding"])
 app.include_router(ws_router, tags=["⚡ Real-time"])
+app.include_router(health_tip_router, tags=["💡 Health Tips"])
 
 # Add throttle configuration router
 from api.throttle import router as throttle_router

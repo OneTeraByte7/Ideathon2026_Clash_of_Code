@@ -8,6 +8,7 @@ import SeedControl from "../components/SeedControl";
 import ThrottleControl from "../components/ThrottleControl";
 import StatsBar from "../components/StatsBar";
 import CriticalBanner from "../components/CriticalBanner";
+import HealthTipWidget from "../components/HealthTipWidget";
 
 export default function Dashboard() {
   const [patients, setPatients] = useState([]);
@@ -168,8 +169,13 @@ export default function Dashboard() {
                   }
                   
                   // Create absolutely unique key with multiple fallbacks  
-                  const patientKey = `patient-${String(p.id)}-${p.name?.replace(/\s+/g, '-') || 'unknown'}-${i}`;
-                  
+                  let patientKey = `patient-${p.id || 'noid'}-${p.name?.replace(/\s+/g, '-') || 'unknown'}-${i}`;
+                  if (!p.id) {
+                    console.warn('Patient missing id, using fallback key:', p);
+                  }
+                  if (!patientKey || patientKey === 'patient-noid-unknown-' + i) {
+                    patientKey = `patient-fallback-${i}-${Date.now()}`;
+                  }
                   return (
                     <PatientCard
                       key={patientKey}
@@ -218,8 +224,11 @@ export default function Dashboard() {
                     
                     const color = a.level === "critical" ? "#ff2d78" : "#f59e0b";
                     // Create unique alert key with timestamp and content - avoid object references
-                    const alertKey = `alert-${i}-${a.level || 'unknown'}-${a.triggered_at || Date.now()}-${String(a.message || 'msg').substring(0, 10)}`;
-                    
+                    let alertKey = `alert-${i}-${a.level || 'unknown'}-${a.triggered_at || Date.now()}-${String(a.message || 'msg').substring(0, 10)}`;
+                    if (!a.level && !a.triggered_at && !a.message) {
+                      alertKey = `alert-fallback-${i}-${Date.now()}`;
+                      console.warn('Alert missing key fields, using fallback key:', a);
+                    }
                     return (
                       <motion.div
                         key={alertKey}

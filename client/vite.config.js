@@ -7,6 +7,14 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/ws": { target: "ws://localhost:8000", ws: true },
+      "/health-tip": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/throttle": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -92,6 +92,7 @@ export default function Dashboard() {
     <div className={`min-h-screen grid-bg transition-colors duration-300 ${
       isDark ? '' : 'bg-gray-50'
     }`} style={{ paddingTop: "72px" }}>
+      <HealthTipWidget />
       {/* Ambient orbs */}
       <div className={`fixed top-32 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.025] pointer-events-none`} 
         style={{ background: isDark ? "#00f5d4" : "#06b6d4" }} />

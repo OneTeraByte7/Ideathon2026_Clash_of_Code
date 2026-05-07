@@ -11,7 +11,7 @@ print()
 tables = cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
 
 if not tables:
-    print("❌ No tables found! Run: python -m db.init_db")
+    print("❌ No tables found! Run: python -m db.init_db.do again")
 else:
     for (table_name,) in tables:
         count = cursor.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]

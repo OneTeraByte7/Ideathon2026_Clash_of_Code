@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Asclepius AI - Minimal Server",
-    description="Minimal server to test alert throttling system",
+    description="Minimal server to test alert throttling system for real-time",
     version="1.0.0"
 )
 
